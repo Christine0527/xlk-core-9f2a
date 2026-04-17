@@ -1,0 +1,151 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'        # 推 v1.0.0 這類 tag 就自動觸發
+  workflow_dispatch:  # 也可以在 GitHub 網頁上手動觸發
+
+jobs:
+  # ─── Mac 版本（.dmg）────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies + PyInstaller
+        run: pip install -r python/requirements.txt pyinstaller
+
+      - name: Bundle Python executables (PyInstaller)
+        run: |
+          cd python
+          pyinstaller --onefile --name server \
+            --hidden-import flask \
+            --hidden-import flask_sock \
+            --hidden-import pymobiledevice3 \
+            --hidden-import pymobiledevice3.usbmux \
+            --hidden-import pymobiledevice3.lockdown \
+            --hidden-import pymobiledevice3.services.simulate_location \
+            --hidden-import pymobiledevice3.services.mobile_image_mounter \
+            --hidden-import pymobiledevice3.remote.tunnel_service \
+            --hidden-import pymobiledevice3.remote.remote_service_discovery \
+            --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider \
+            --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation \
+            server.py
+          pyinstaller --onefile --name root_bridge \
+            --hidden-import pymobiledevice3 \
+            --hidden-import pymobiledevice3.remote.tunnel_service \
+            --hidden-import pymobiledevice3.remote.remote_service_discovery \
+            --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider \
+            --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation \
+            root_bridge.py
+          mkdir -p ../python-dist/mac
+          cp dist/server ../python-dist/mac/
+          cp dist/root_bridge ../python-dist/mac/
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Mac app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # 跳過 code signing（測試用）
+        run: npm run pack:mac
+
+      - name: Upload Mac DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: release/*.dmg
+
+  # ─── Windows 版本（.exe 安裝包）─────────────────────
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies + PyInstaller
+        run: pip install -r python/requirements.txt pyinstaller
+
+      - name: Bundle Python executables (PyInstaller)
+        run: |
+          cd python
+          pyinstaller --onefile --name server `
+            --hidden-import flask `
+            --hidden-import flask_sock `
+            --hidden-import pymobiledevice3 `
+            --hidden-import pymobiledevice3.usbmux `
+            --hidden-import pymobiledevice3.lockdown `
+            --hidden-import pymobiledevice3.services.simulate_location `
+            --hidden-import pymobiledevice3.services.mobile_image_mounter `
+            --hidden-import pymobiledevice3.remote.tunnel_service `
+            --hidden-import pymobiledevice3.remote.remote_service_discovery `
+            --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider `
+            --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation `
+            server.py
+          pyinstaller --onefile --name root_bridge `
+            --hidden-import pymobiledevice3 `
+            --hidden-import pymobiledevice3.remote.tunnel_service `
+            --hidden-import pymobiledevice3.remote.remote_service_discovery `
+            --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider `
+            --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation `
+            root_bridge.py
+          mkdir -p ../python-dist/win
+          copy dist\server.exe ..\python-dist\win\
+          copy dist\root_bridge.exe ..\python-dist\win\
+        shell: powershell
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Windows app
+        run: npm run pack:win
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-installer
+          path: release/*.exe
+
+  # ─── 自動建立 GitHub Release ─────────────────────────
+  create-release:
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Mac artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-installer
+          path: artifacts/mac
+
+      - name: Download Win artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: win-installer
+          path: artifacts/win
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          files: |
+            artifacts/mac/*.dmg
+            artifacts/win/*.exe

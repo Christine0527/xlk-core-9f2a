@@ -1,0 +1,43 @@
+export const theme = {
+  colors: {
+    bg:           '#F1F3F4',
+    surface:      '#FFFFFF',
+    surfaceHover: '#F8F9FA',
+    border:       '#E8EAED',
+    primary:      '#1A73E8',
+    primaryLight: '#4285F4',
+    primaryDark:  '#1557B0',
+    accent:       '#FBBC04',
+    accent2:      '#34A853',
+    accent3:      '#EA4335',
+    textPrimary:  '#202124',
+    textSecondary:'#5F6368',
+    textMuted:    '#9AA0A6',
+    success:      '#34A853',
+    warning:      '#FBBC04',
+    error:        '#EA4335',
+  },
+  radii: {
+    sm:   '8px',
+    md:   '14px',
+    lg:   '20px',
+    xl:   '28px',
+    full: '9999px',
+  },
+  shadows: {
+    soft:   '0 1px 6px rgba(60,64,67,0.12), 0 1px 3px rgba(60,64,67,0.08)',
+    card:   '0 2px 16px rgba(60,64,67,0.14), 0 1px 4px rgba(60,64,67,0.08)',
+    button: '0 4px 12px rgba(26,115,232,0.3)',
+    inset:  'inset 0 1px 3px rgba(60,64,67,0.1)',
+    pop:    '0 8px 24px rgba(60,64,67,0.18), 0 2px 8px rgba(60,64,67,0.1)',
+  },
+  fonts: {
+    sans: '"Google Sans", "Noto Sans TC", "Inter", system-ui, sans-serif',
+    mono: '"JetBrains Mono", "Fira Code", monospace',
+  },
+  transitions: {
+    fast:   '0.12s ease',
+    normal: '0.2s ease',
+    spring: '0.3s cubic-bezier(0.34,1.56,0.64,1)',
+  },
+}

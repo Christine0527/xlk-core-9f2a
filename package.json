@@ -1,0 +1,62 @@
+{
+  "name": "ios-location-master",
+  "version": "1.0.0",
+  "description": "iPhone GPS location spoofer",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -n VITE,ELECTRON -c cyan,yellow \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build",
+    "pack": "vite build && electron-builder",
+    "pack:mac": "vite build && electron-builder --mac",
+    "pack:win": "vite build && electron-builder --win",
+    "python:install": "pip3 install -r python/requirements.txt"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-leaflet": "^4.2.1",
+    "styled-components": "^6.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.0.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "vite": "^5.4.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.ios-location-master.app",
+    "productName": "iOS Location Master",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.utilities",
+      "extraResources": [
+        { "from": "python-dist/mac/", "to": "python/", "filter": ["server", "root_bridge"] }
+      ]
+    },
+    "dmg": {
+      "title": "${productName} ${version}"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "extraResources": [
+        { "from": "python-dist/win/", "to": "python/", "filter": ["server.exe", "root_bridge.exe"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
