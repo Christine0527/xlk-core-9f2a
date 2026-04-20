@@ -6,6 +6,27 @@ import shutil
 import subprocess
 import sys
 import time
+
+# ─── PyInstaller 打包模式下補齊缺失的 package metadata ──
+# pymobiledevice3 內部呼叫 importlib.metadata.metadata('apple_compress')，
+# PyInstaller onefile 有時無法正確打包 dist-info，這裡做 fallback 避免崩潰。
+if getattr(sys, 'frozen', False):
+    import importlib.metadata as _im
+    _orig_packages_distributions = getattr(_im, 'packages_distributions', None)
+    _orig_metadata = _im.metadata
+
+    def _safe_metadata(package_name):
+        try:
+            return _orig_metadata(package_name)
+        except _im.PackageNotFoundError:
+            from email.message import Message
+            msg = Message()
+            msg['Metadata-Version'] = '2.1'
+            msg['Name'] = package_name
+            msg['Version'] = '0.0.0'
+            return msg
+
+    _im.metadata = _safe_metadata
 from flask import Flask, request, jsonify
 from flask_sock import Sock
 from device_manager import DeviceManager
