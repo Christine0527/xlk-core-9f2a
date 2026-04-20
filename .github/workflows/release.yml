@@ -54,10 +54,18 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build Mac app
+      - name: Build Vite
+        run: npx vite build
+
+      - name: Build Mac app (arm64)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npx vite build && npx electron-builder --mac --publish never
+        run: npx electron-builder --mac --arch arm64 --publish never
+
+      - name: Build Mac app (x64)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npx electron-builder --mac --arch x64 --publish never
 
       - name: Upload Mac DMG
         uses: actions/upload-artifact@v4
