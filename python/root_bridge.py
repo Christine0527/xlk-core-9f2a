@@ -64,9 +64,9 @@ async def connect():
     svc = services[0]
     logger.info(f'Found: {svc}')
 
-    # 先嘗試 QUIC，再 fallback 到 TCP
+    # iOS 18.2+ 只支援 TCP；舊版先試 TCP，不行再試 QUIC
     last_err = None
-    for protocol in [TunnelProtocol.QUIC, TunnelProtocol.TCP]:
+    for protocol in [TunnelProtocol.TCP, TunnelProtocol.QUIC]:
         try:
             logger.info(f'Trying tunnel protocol: {protocol}')
             _tunnel_cm = start_tunnel(svc, protocol=protocol)
