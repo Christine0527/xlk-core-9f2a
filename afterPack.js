@@ -7,7 +7,7 @@ exports.default = async function afterPack(context) {
   console.log(`[afterPack] Ad-hoc signing: ${appPath}`)
 
   try {
-    execSync(`codesign --sign - --force --deep --options runtime "${appPath}"`, {
+    execSync(`codesign --sign - --force --deep "${appPath}"`, {
       stdio: 'inherit',
     })
     console.log('[afterPack] Ad-hoc signing done')
