@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
 const { spawn, exec } = require('child_process')
 const http = require('http')
 const net = require('net')
+const { autoUpdater } = require('electron-updater')
 
 const isWin = process.platform === 'win32'
 const isMac = process.platform === 'darwin'
@@ -259,6 +260,8 @@ async function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
+
+  setupAutoUpdater()
 }
 
 // ─── IPC 路由 ─────────────────────────────────────────
@@ -272,6 +275,54 @@ ipcMain.handle('location:stop', (_, udid) => callPython('location.stop', { udid 
 ipcMain.handle('location:route', (_, { udid, waypoints, speed }) =>
   callPython('location.route', { udid, waypoints, speed })
 )
+
+// ─── 自動更新 ─────────────────────────────────────────
+function setupAutoUpdater() {
+  if (!app.isPackaged) return
+
+  autoUpdater.autoDownload = false
+
+  autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '發現新版本',
+      message: `新版本 ${info.version} 已發布！`,
+      detail: '是否現在下載並更新？下載完成後重新啟動即可完成安裝。',
+      buttons: ['立即更新', '稍後再說'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.downloadUpdate()
+    })
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update:progress', Math.round(progress.percent))
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '更新已下載完成',
+      message: '新版本已下載完成',
+      detail: '點擊「立即重啟」完成安裝，或下次啟動時自動安裝。',
+      buttons: ['立即重啟', '下次再說'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall()
+    })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('[Updater] Already up to date.')
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('[Updater] Error:', err.message)
+  })
+
+  // app 啟動 3 秒後靜默檢查
+  setTimeout(() => autoUpdater.checkForUpdates(), 3000)
+}
 
 // ─── App 生命週期 ─────────────────────────────────────
 app.whenReady().then(createWindow)

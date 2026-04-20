@@ -44,7 +44,9 @@
       "Read(//Users/zengyingxian/.nvm/alias/**)",
       "Read(//opt/homebrew/Cellar/node/25.9.0_1/bin/**)",
       "Bash(grep *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(open http://localhost:8765)",
+      "Bash(gh run *)"
     ]
   }
 }

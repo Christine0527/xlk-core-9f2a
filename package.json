@@ -12,6 +12,7 @@
     "python:install": "pip3 install -r python/requirements.txt"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "leaflet": "^1.9.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -37,19 +38,48 @@
       "electron/**/*"
     ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
       "category": "public.app-category.utilities",
       "extraResources": [
-        { "from": "python-dist/mac/", "to": "python/", "filter": ["server", "root_bridge"] }
+        {
+          "from": "python-dist/mac/",
+          "to": "python/",
+          "filter": [
+            "server",
+            "root_bridge"
+          ]
+        }
       ]
     },
     "dmg": {
       "title": "${productName} ${version}"
     },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "extraResources": [
-        { "from": "python-dist/win/", "to": "python/", "filter": ["server.exe", "root_bridge.exe"] }
+        {
+          "from": "python-dist/win/",
+          "to": "python/",
+          "filter": [
+            "server.exe",
+            "root_bridge.exe"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -57,6 +87,11 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Christine0527",
+      "repo": "changemaps12345"
     }
   }
 }
