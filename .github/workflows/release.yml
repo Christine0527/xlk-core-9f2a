@@ -41,6 +41,8 @@ jobs:
             --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation \
             --collect-all apple_compress \
             --collect-all pymobiledevice3 \
+            --copy-metadata apple_compress \
+            --copy-metadata pymobiledevice3 \
             server.py
           pyinstaller --onefile --name root_bridge \
             --hidden-import pymobiledevice3 \
@@ -50,6 +52,8 @@ jobs:
             --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation \
             --collect-all apple_compress \
             --collect-all pymobiledevice3 \
+            --copy-metadata apple_compress \
+            --copy-metadata pymobiledevice3 \
             root_bridge.py
           mkdir -p ../python-dist/mac
           cp dist/server ../python-dist/mac/
@@ -111,6 +115,8 @@ jobs:
             --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation `
             --collect-all apple_compress `
             --collect-all pymobiledevice3 `
+            --copy-metadata apple_compress `
+            --copy-metadata pymobiledevice3 `
             server.py
           pyinstaller --onefile --name root_bridge `
             --hidden-import pymobiledevice3 `
@@ -120,6 +126,8 @@ jobs:
             --hidden-import pymobiledevice3.services.dvt.instruments.location_simulation `
             --collect-all apple_compress `
             --collect-all pymobiledevice3 `
+            --copy-metadata apple_compress `
+            --copy-metadata pymobiledevice3 `
             root_bridge.py
           mkdir -p ../python-dist/win
           copy dist\server.exe ..\python-dist\win\
