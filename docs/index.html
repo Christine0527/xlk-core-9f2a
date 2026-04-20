@@ -397,6 +397,31 @@
 
     .copy-btn:hover { background: var(--accent2); }
 
+    .mac-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+    .mac-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .mac-step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #d97706;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
     @media (max-width: 480px) {
       .req-grid { grid-template-columns: 1fr; }
       .dl-btn { width: 100%; justify-content: center; }
@@ -447,11 +472,25 @@
     <div class="mac-notice" id="mac-notice" style="display:none">
       <div class="mac-notice-icon">⚠️</div>
       <div>
-        <strong>macOS 使用者注意</strong>：首次開啟時會出現安全性提示，請依以下步驟允許：<br><br>
-        <strong>步驟 1．</strong>出現「未打開 iOS Location Master」視窗 → 點「<strong>完成</strong>」關閉<br>
-        <strong>步驟 2．</strong>打開 <strong>系統設定 → 隱私權與安全性</strong><br>
-        <strong>步驟 3．</strong>往下滑，找到「iOS Location Master 已被擋下」→ 點「<strong>仍要打開</strong>」<br><br>
-        完成後即可正常使用，之後不會再出現此提示。
+        <strong>macOS 使用者注意</strong>：首次開啟需要手動允許，共 4 步，只需做一次：<br><br>
+        <div class="mac-steps">
+          <div class="mac-step">
+            <span class="mac-step-num">1</span>
+            <span>出現「未打開 iOS Location Master」提示 → 點「<strong>完成</strong>」關閉視窗</span>
+          </div>
+          <div class="mac-step">
+            <span class="mac-step-num">2</span>
+            <span>點左上角 Apple 選單 → 點「<strong>系統設定</strong>」</span>
+          </div>
+          <div class="mac-step">
+            <span class="mac-step-num">3</span>
+            <span>左側點「<strong>隱私權與安全性</strong>」→ 往下滑找到「已阻擋 iOS Location Master」→ 點「<strong>強制打開</strong>」</span>
+          </div>
+          <div class="mac-step">
+            <span class="mac-step-num">4</span>
+            <span>彈出確認視窗 → 點「<strong>強制打開</strong>」即完成</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
