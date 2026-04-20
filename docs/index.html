@@ -253,6 +253,93 @@
       font-weight: 700;
     }
 
+    /* ── iPhone Setup Guide ── */
+    .iphone-guide {
+      padding: 60px 24px 80px;
+      background: var(--bg);
+    }
+
+    .guide-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .guide-inner h2 {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .guide-subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .step-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      padding: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-body h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .step-body p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 8px;
+    }
+
+    .step-body p:last-of-type { margin-bottom: 0; }
+
+    .step-tip {
+      margin-top: 10px;
+      background: #f0f7ff;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: #3b5bdb;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 560px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+
     /* ── Footer ── */
     footer {
       text-align: center;
@@ -263,6 +350,52 @@
     }
 
     footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── macOS notice ── */
+    .mac-notice {
+      margin-top: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #fffbe6;
+      border: 1px solid #facc15;
+      border-radius: 12px;
+      padding: 16px 20px;
+      max-width: 560px;
+      text-align: left;
+      font-size: 0.85rem;
+      line-height: 1.65;
+      color: #78350f;
+    }
+
+    .mac-notice-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+    .mac-notice code {
+      display: inline-block;
+      margin-top: 6px;
+      background: #1a1a2e;
+      color: #a5f3fc;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 4px 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    .copy-btn:hover { background: var(--accent2); }
 
     @media (max-width: 480px) {
       .req-grid { grid-template-columns: 1fr; }
@@ -310,6 +443,16 @@
     </div>
 
     <p class="version-note">最新版本：<span id="version">v1.0.0</span>　·　免費使用</p>
+
+    <div class="mac-notice" id="mac-notice" style="display:none">
+      <div class="mac-notice-icon">⚠️</div>
+      <div>
+        <strong>macOS 使用者注意</strong>：首次下載可能出現「已損毀」提示。<br>
+        請在 Terminal 執行以下指令後，再重新開啟安裝檔：<br>
+        <code id="xattr-cmd">xattr -cr ~/Downloads/iOS-Location-Master-arm64.dmg</code>
+        <button class="copy-btn" onclick="copyXattr()">複製指令</button>
+      </div>
+    </div>
   </section>
 
   <!-- ── App Preview ── -->
@@ -390,6 +533,76 @@
     </div>
   </section>
 
+  <!-- ── iPhone Setup Guide ── -->
+  <section class="iphone-guide">
+    <div class="guide-inner">
+      <h2>📱 iPhone 設定步驟</h2>
+      <p class="guide-subtitle">第一次使用前，請依照以下步驟完成 iPhone 設定，只需設定一次即可。</p>
+
+      <div class="steps-grid">
+
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>確認 iOS 版本</h3>
+            <p>前往 <strong>設定 → 一般 → 關於本機</strong>，確認 iOS 版本為 <strong>14.0 以上</strong>。</p>
+            <div class="step-tip">建議更新至最新版本，以獲得最佳相容性。</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>開啟開發者模式（iOS 16+）</h3>
+            <p>前往 <strong>設定 → 隱私權與安全性 → 開發者模式</strong>，將開關切為開啟。</p>
+            <p>iPhone 會要求重新開機並確認，點選<strong>「開啟」</strong>完成設定。</p>
+            <div class="step-tip">iOS 15 以下不需要此步驟，可直接跳至下一步。</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>用 USB 連接電腦</h3>
+            <p>使用原廠或 MFi 認證的 Lightning / USB-C 傳輸線，將 iPhone 連接至電腦。</p>
+            <div class="step-tip">避免使用僅供充電的線材，需支援資料傳輸。</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>信任此電腦</h3>
+            <p>連接後，iPhone 螢幕會彈出<strong>「是否信任此電腦？」</strong>的提示。</p>
+            <p>點選<strong>「信任」</strong>，並輸入 iPhone 密碼確認。</p>
+            <div class="step-tip">若未出現提示，請解鎖 iPhone 後重新插拔傳輸線。</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h3>iOS 17+ 額外步驟：允許 Tunnel</h3>
+            <p>iOS 17 以上版本首次使用時，App 會請求系統管理員權限以建立定位通道。</p>
+            <p><strong>Mac</strong>：輸入電腦登入密碼授權。<br>
+               <strong>Windows</strong>：在 UAC 彈窗點選「是」允許。</p>
+            <div class="step-tip">此授權只在第一次或重開機後需要，之後會自動保持連線。</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <h3>開始使用</h3>
+            <p>開啟 iOS Location Master，在裝置列表中選擇你的 iPhone，接著在地圖上點選任意位置即可移動定位。</p>
+            <div class="step-tip">如果裝置沒有出現，請確認傳輸線連接正常，並重新信任電腦。</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
   <!-- ── Footer ── -->
   <footer>
     <p>
@@ -404,20 +617,38 @@
   <script>
     const REPO = 'Christine0527/changemaps-releases'
 
+    // 只對 macOS 使用者顯示 Gatekeeper 提示
+    const isMac = /Mac|Macintosh|MacIntel/.test(navigator.userAgent)
+    if (isMac) document.getElementById('mac-notice').style.display = 'flex'
+
+    let macFilename = 'iOS-Location-Master-arm64.dmg'
+
     fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
       .then(r => r.json())
       .then(data => {
         if (data.tag_name) {
           document.getElementById('version').textContent = data.tag_name
 
-          // 更新下載連結為實際 release asset URL
           const macAsset = data.assets?.find(a => a.name.includes('arm64') && a.name.endsWith('.dmg'))
           const winAsset = data.assets?.find(a => a.name.endsWith('.exe'))
-          if (macAsset) document.getElementById('dl-mac').href = macAsset.browser_download_url
+          if (macAsset) {
+            document.getElementById('dl-mac').href = macAsset.browser_download_url
+            macFilename = macAsset.name
+            document.getElementById('xattr-cmd').textContent = `xattr -cr ~/Downloads/${macAsset.name}`
+          }
           if (winAsset) document.getElementById('dl-win').href = winAsset.browser_download_url
         }
       })
       .catch(() => {})
+
+    function copyXattr() {
+      const cmd = document.getElementById('xattr-cmd').textContent
+      navigator.clipboard.writeText(cmd).then(() => {
+        const btn = document.querySelector('.copy-btn')
+        btn.textContent = '已複製！'
+        setTimeout(() => btn.textContent = '複製指令', 2000)
+      })
+    }
   </script>
 
 </body>
