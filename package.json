@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.ios-location-master.app",
     "productName": "iOS Location Master",
+    "afterPack": "./afterPack.js",
     "directories": {
       "output": "release"
     },
