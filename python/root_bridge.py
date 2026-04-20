@@ -25,6 +25,7 @@ PORT_FILE = _bridge_port_file()
 _sim = None
 _dvt_provider = None
 _tunnel_cm = None
+_connecting = False
 
 
 async def _cleanup():
@@ -63,8 +64,20 @@ async def connect():
     svc = services[0]
     logger.info(f'Found: {svc}')
 
-    _tunnel_cm = start_tunnel(svc, protocol=TunnelProtocol.TCP)
-    tunnel_result = await _tunnel_cm.__aenter__()
+    # 先嘗試 QUIC，再 fallback 到 TCP
+    last_err = None
+    for protocol in [TunnelProtocol.QUIC, TunnelProtocol.TCP]:
+        try:
+            logger.info(f'Trying tunnel protocol: {protocol}')
+            _tunnel_cm = start_tunnel(svc, protocol=protocol)
+            tunnel_result = await _tunnel_cm.__aenter__()
+            break
+        except Exception as e:
+            logger.warning(f'{protocol} failed: {e}')
+            last_err = e
+            _tunnel_cm = None
+    else:
+        raise RuntimeError(f'所有 tunnel 協議均失敗：{last_err}')
 
     rsd = RemoteServiceDiscoveryService((tunnel_result.address, tunnel_result.port))
     await rsd.connect()
@@ -78,8 +91,30 @@ async def connect():
     logger.info('Ready to spoof location!')
 
 
+async def _connect_in_background():
+    """背景連接，失敗後自動重試"""
+    global _connecting
+    _connecting = True
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            await connect()
+            logger.info('Device connected successfully!')
+            _connecting = False
+            return
+        except Exception as e:
+            logger.error(f'Connect attempt {attempt} failed: {e}')
+            wait = min(attempt * 5, 60)
+            logger.info(f'Retrying in {wait}s...')
+            await asyncio.sleep(wait)
+
+
 async def _reconnect_with_retry():
-    global _sim
+    global _sim, _connecting
+    if _connecting:
+        return
+    _connecting = True
     attempt = 0
     while True:
         attempt += 1
@@ -89,6 +124,7 @@ async def _reconnect_with_retry():
         try:
             await connect()
             logger.info('Reconnected successfully!')
+            _connecting = False
             return True
         except Exception as e:
             logger.error(f'Attempt {attempt} failed: {e}')
@@ -117,7 +153,7 @@ async def handle_client(reader, writer):
             return
 
         if _sim is None:
-            writer.write(json.dumps({'ok': False, 'error': '連線中斷，正在重連...'}).encode())
+            writer.write(json.dumps({'ok': False, 'error': '裝置尚未連接，請稍後重試'}).encode())
             return
 
         if cmd == 'set':
@@ -170,20 +206,22 @@ async def main():
     except Exception:
         pass
 
-    logger.info('Connecting to device...')
-    await connect()
-
     port = _find_free_port()
 
-    # 確保目錄存在（Windows C:\ProgramData 預設存在，但以防萬一）
-    os.makedirs(os.path.dirname(PORT_FILE), exist_ok=True)
-
+    # 先啟動 TCP server
     server = await asyncio.start_server(handle_client, '127.0.0.1', port)
 
-    # 寫入 port 檔案，讓呼叫方知道要連哪個 port
+    # 寫 port 檔案（讓 server.py / main.js 知道 bridge 已啟動）
+    parent_dir = os.path.dirname(PORT_FILE)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
     with open(PORT_FILE, 'w') as f:
         f.write(str(port))
     logger.info(f'Listening on 127.0.0.1:{port}  (port file: {PORT_FILE})')
+
+    # 背景連接設備（不阻塞啟動）
+    logger.info('Connecting to device in background...')
+    asyncio.ensure_future(_connect_in_background())
 
     async with server:
         await server.serve_forever()

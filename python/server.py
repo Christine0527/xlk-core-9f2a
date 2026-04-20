@@ -153,12 +153,14 @@ def _ensure_bridge():
         else:
             _start_bridge_macos(script_path)
 
-        # 等待 bridge 就緒（最多 40 秒）
+        # 等待 bridge TCP server 啟動（pong=True 即代表 bridge 已起來）
+        # 設備連接在背景進行，不在此等待
         for _ in range(80):
             time.sleep(0.5)
-            if _bridge_ping().get('ok'):
+            status = _bridge_ping()
+            if status.get('pong'):
                 _bridge_ready = True
-                logger.info('root_bridge ready!')
+                logger.info('root_bridge TCP server ready!')
                 return
 
         raise RuntimeError('root_bridge 啟動逾時，請查看日誌')

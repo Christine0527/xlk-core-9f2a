@@ -586,7 +586,7 @@ export default function App() {
               ))}
             </div>
             <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: 'center', padding: '6px 0 2px' }}>
-              iOS Location Master v1.1.8
+              iOS Location Master v1.1.9
             </div>
           </div>
         </Sidebar>
