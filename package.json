@@ -91,7 +91,7 @@
     "publish": {
       "provider": "github",
       "owner": "Christine0527",
-      "repo": "changemaps12345"
+      "repo": "changemaps-releases"
     }
   }
 }
