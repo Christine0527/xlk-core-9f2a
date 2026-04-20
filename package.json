@@ -1,6 +1,6 @@
 {
   "name": "ios-location-master",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "iPhone GPS location spoofer",
   "main": "electron/main.js",
   "scripts": {
