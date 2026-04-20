@@ -39,6 +39,7 @@
     ],
     "mac": {
       "target": [{ "target": "dmg" }],
+      "artifactName": "iOS-Location-Master-${arch}.dmg",
       "category": "public.app-category.utilities",
       "extraResources": [
         {
@@ -55,14 +56,8 @@
       "title": "iOSLocationMaster"
     },
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "artifactName": "iOS-Location-Master-Setup.exe",
       "extraResources": [
         {
           "from": "python-dist/win/",
