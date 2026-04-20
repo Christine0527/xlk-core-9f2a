@@ -100,8 +100,15 @@ def _ensure_bridge():
             time.sleep(2)
 
         logger.info('Starting root_bridge (one-time admin authorization)...')
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        script_path = os.path.join(script_dir, 'root_bridge.py')
+        if getattr(sys, 'frozen', False):
+            # PyInstaller 打包模式：root_bridge binary 在 server 同一層目錄
+            bin_dir = os.path.dirname(sys.executable)
+            bridge_name = 'root_bridge.exe' if sys.platform == 'win32' else 'root_bridge'
+            script_path = os.path.join(bin_dir, bridge_name)
+        else:
+            # 開發模式：使用 .py 腳本
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            script_path = os.path.join(script_dir, 'root_bridge.py')
 
         if sys.platform == 'win32':
             _start_bridge_windows(script_path)
@@ -121,9 +128,20 @@ def _ensure_bridge():
 
 def _start_bridge_macos(script_path: str):
     """macOS：透過 osascript 以 root 身分啟動"""
-    # root 無法讀取用戶目錄，複製到 /tmp
-    shutil.copyfile(script_path, '/tmp/root_bridge.py')
-    cmd = f'{PYTHON3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &'
+    if getattr(sys, 'frozen', False):
+        # 打包模式：直接執行 binary
+        tmp_bin = '/tmp/root_bridge_bin'
+        try:
+            os.remove(tmp_bin)
+        except FileNotFoundError:
+            pass
+        shutil.copyfile(script_path, tmp_bin)
+        os.chmod(tmp_bin, 0o755)
+        cmd = f'{tmp_bin} > /tmp/root_bridge.log 2>&1 &'
+    else:
+        # 開發模式：用 Python 跑腳本
+        shutil.copyfile(script_path, '/tmp/root_bridge.py')
+        cmd = f'{PYTHON3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &'
     osascript_cmd = f'do shell script "{cmd}" with administrator privileges'
     result = subprocess.run(
         ['osascript', '-e', osascript_cmd],
@@ -135,13 +153,19 @@ def _start_bridge_macos(script_path: str):
 
 def _start_bridge_windows(script_path: str):
     """Windows：透過 PowerShell Start-Process -Verb RunAs 以管理員身分啟動"""
-    log_path = os.path.join(os.environ.get('TEMP', 'C:\\Temp'), 'root_bridge.log')
-    # 用單引號包住路徑，避免空格問題
-    ps_cmd = (
-        f"Start-Process -FilePath '{PYTHON3}' "
-        f"-ArgumentList '{script_path}' "
-        f"-Verb RunAs -WindowStyle Hidden"
-    )
+    if getattr(sys, 'frozen', False):
+        # 打包模式：直接執行 .exe binary
+        ps_cmd = (
+            f"Start-Process -FilePath '{script_path}' "
+            f"-Verb RunAs -WindowStyle Hidden"
+        )
+    else:
+        # 開發模式：用 Python 跑腳本
+        ps_cmd = (
+            f"Start-Process -FilePath '{PYTHON3}' "
+            f"-ArgumentList '{script_path}' "
+            f"-Verb RunAs -WindowStyle Hidden"
+        )
     result = subprocess.run(
         ['powershell', '-NoProfile', '-Command', ps_cmd],
         capture_output=True, text=True, timeout=30
