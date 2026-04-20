@@ -8,25 +8,42 @@ import sys
 import time
 
 # ─── PyInstaller 打包模式下補齊缺失的 package metadata ──
-# pymobiledevice3 內部呼叫 importlib.metadata.metadata('apple_compress')，
-# PyInstaller onefile 有時無法正確打包 dist-info，這裡做 fallback 避免崩潰。
+# pymobiledevice3 內部用 importlib.metadata 查多個套件版本，
+# PyInstaller onefile 無法完整打包 dist-info，這裡全面 patch 避免崩潰。
 if getattr(sys, 'frozen', False):
     import importlib.metadata as _im
-    _orig_packages_distributions = getattr(_im, 'packages_distributions', None)
-    _orig_metadata = _im.metadata
+    from email.message import Message as _Message
 
+    def _fake_dist(package_name):
+        msg = _Message()
+        msg['Metadata-Version'] = '2.1'
+        msg['Name'] = package_name
+        msg['Version'] = '0.0.0'
+        return msg
+
+    _orig_metadata = _im.metadata
     def _safe_metadata(package_name):
         try:
             return _orig_metadata(package_name)
         except _im.PackageNotFoundError:
-            from email.message import Message
-            msg = Message()
-            msg['Metadata-Version'] = '2.1'
-            msg['Name'] = package_name
-            msg['Version'] = '0.0.0'
-            return msg
-
+            return _fake_dist(package_name)
     _im.metadata = _safe_metadata
+
+    _orig_version = _im.version
+    def _safe_version(package_name):
+        try:
+            return _orig_version(package_name)
+        except _im.PackageNotFoundError:
+            return '0.0.0'
+    _im.version = _safe_version
+
+    _orig_requires = _im.requires
+    def _safe_requires(package_name):
+        try:
+            return _orig_requires(package_name)
+        except _im.PackageNotFoundError:
+            return []
+    _im.requires = _safe_requires
 from flask import Flask, request, jsonify
 from flask_sock import Sock
 from device_manager import DeviceManager
