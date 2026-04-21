@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import styled, { createGlobalStyle, keyframes } from 'styled-components'
 import { theme } from './theme'
 import { useLang } from './LangContext'
@@ -8,6 +8,7 @@ import { DeviceStatus } from './components/DeviceStatus'
 import { Map } from './components/Map'
 import { Onboarding } from './components/Onboarding'
 import { TRANSPORT_MODES, fmtDist, fmtTime, haversine } from './utils/gps'
+import { IS_TRIAL, TRIAL_MINUTES } from './config'
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -232,6 +233,41 @@ const Spinner = styled.span`
   flex-shrink: 0;
 `
 
+const TrialBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: ${theme.radii.full};
+  background: #fff8e1;
+  border: 1.5px solid #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b45309;
+  font-family: ${theme.fonts.sans};
+`
+
+const TrialOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+`
+
+const TrialModal = styled.div`
+  background: ${theme.colors.surface};
+  border-radius: ${theme.radii.lg};
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+  font-family: ${theme.fonts.sans};
+`
+
 function getErrorSolution(msg) {
   if (!msg) return null
   if (msg.includes('取消授權') || msg.includes('啟動失敗')) return '請重新點擊連接按鈕並輸入管理員密碼'
@@ -254,7 +290,13 @@ export default function App() {
   const [routeMode, setRouteMode] = useState(false)
   const [transport, setTransport] = useState('walk')
   const [routeInfo, setRouteInfo] = useState(null)
-  const [activeRoute, setActiveRoute] = useState(null)  // 行駛中路線資訊
+  const [activeRoute, setActiveRoute] = useState(null)
+
+  // ─── Trial ────────────────────────────────────────────────────
+  const TRIAL_SECS = TRIAL_MINUTES * 60
+  const [trialSecsLeft, setTrialSecsLeft] = useState(TRIAL_SECS)
+  const [trialExpired, setTrialExpired] = useState(false)
+  const trialTimerRef = useRef(null)
 
   const handleRouteUpdate = useCallback((info) => setRouteInfo(info), [])
   const {
@@ -264,8 +306,32 @@ export default function App() {
 
   const isRouting = currentSpeedKmh != null
 
+  // 試用計時器：isActive 時倒數，停止時暫停
+  useEffect(() => {
+    if (!IS_TRIAL) return
+    if (isActive && !trialExpired) {
+      trialTimerRef.current = setInterval(() => {
+        setTrialSecsLeft(s => {
+          if (s <= 1) {
+            clearInterval(trialTimerRef.current)
+            setTrialExpired(true)
+            stopLocation()
+            setRouteMode(false)
+            setRouteInfo(null)
+            return 0
+          }
+          return s - 1
+        })
+      }, 1000)
+    } else {
+      clearInterval(trialTimerRef.current)
+    }
+    return () => clearInterval(trialTimerRef.current)
+  }, [isActive, trialExpired, stopLocation])
 
   const handleStartRoute = useCallback((path, speed, opts) => {
+    // 試用版速度上限 30 km/h (8.33 m/s)
+    const cappedSpeed = IS_TRIAL ? Math.min(speed, 8.33) : speed
     setActiveRoute({
       path,
       routedDist: routeInfo?.routedDist ?? 0,
@@ -274,7 +340,7 @@ export default function App() {
     })
     // routeMode 由 Map 的 onToggleRouteMode 負責關閉，這裡不重複設定
     setRouteInfo(null)
-    startRoute(path, speed, opts)
+    startRoute(path, cappedSpeed, opts)
   }, [routeInfo, startRoute])
 
   // 路線結束後清空行駛資訊
@@ -579,6 +645,17 @@ export default function App() {
 
           {sidebarPanel}
 
+          {IS_TRIAL && (
+            <TrialBadge>
+              <span>⏱</span>
+              <span>{t.trialBadge}</span>
+              <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>
+                {String(Math.floor(trialSecsLeft / 60)).padStart(2, '0')}:
+                {String(trialSecsLeft % 60).padStart(2, '0')}
+              </span>
+            </TrialBadge>
+          )}
+
           <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: 'center', padding: '14px 0 2px' }}>
             iOS Location Master v1.2.0
           </div>
@@ -614,6 +691,45 @@ export default function App() {
             <ErrorSolution>→ {getErrorSolution(locationError)}</ErrorSolution>
           )}
         </ErrorToast>
+      )}
+
+      {IS_TRIAL && trialExpired && (
+        <TrialOverlay>
+          <TrialModal>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⏰</div>
+            <div style={{
+              fontSize: 18, fontWeight: 700,
+              color: theme.colors.textPrimary, marginBottom: 10,
+            }}>
+              {t.trialExpiredTitle}
+            </div>
+            <div style={{
+              fontSize: 14, color: theme.colors.textSecondary,
+              lineHeight: 1.7, marginBottom: 24,
+            }}>
+              {t.trialExpiredDesc}
+            </div>
+            <ActionBtn
+              $primary
+              style={{ width: '100%', marginBottom: 10 }}
+              onClick={() => {
+                // 換成你的 Gumroad 或購買頁連結
+                window.open('https://your-purchase-link.com', '_blank')
+              }}
+            >
+              {t.buyNow}
+            </ActionBtn>
+            <ActionBtn
+              style={{ width: '100%' }}
+              onClick={() => {
+                setTrialExpired(false)
+                setTrialSecsLeft(TRIAL_SECS)
+              }}
+            >
+              {t.continueTrial}
+            </ActionBtn>
+          </TrialModal>
+        </TrialOverlay>
       )}
     </>
   )

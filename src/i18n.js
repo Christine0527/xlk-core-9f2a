@@ -63,6 +63,15 @@ export const translations = {
     routeReadyHint:    '🛣 路線已規劃，點地圖繼續加點',
     addWaypointHint:   '🗺 點地圖加入路徑點',
 
+    // Trial
+    trialBadge:       '試用版',
+    trialRemaining:   '剩餘試用',
+    trialExpiredTitle:'試用時間已結束',
+    trialExpiredDesc: '感謝試用！購買正式版即可解除所有限制，無限使用。',
+    trialSpeedLimit:  '試用版速度上限 30 km/h',
+    buyNow:           '購買正式版',
+    continueTrial:    '繼續試用',
+
     // Lang toggle
     langToggle:     'EN',
   },
@@ -125,6 +134,15 @@ export const translations = {
     routePlanningHint: '⏳ Planning route…',
     routeReadyHint:    '🛣 Route planned, click to add more',
     addWaypointHint:   '🗺 Click map to add waypoints',
+
+    // Trial
+    trialBadge:       'Trial',
+    trialRemaining:   'Trial remaining',
+    trialExpiredTitle:'Trial Ended',
+    trialExpiredDesc: 'Thanks for trying! Purchase the full version to remove all limits.',
+    trialSpeedLimit:  'Trial version: speed capped at 30 km/h',
+    buyNow:           'Buy Full Version',
+    continueTrial:    'Continue Trial',
 
     langToggle:     '中',
   },
