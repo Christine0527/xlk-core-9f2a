@@ -50,7 +50,28 @@
       "Bash(npm install *)",
       "Bash(open *)",
       "Bash(gh repo *)",
-      "Bash(node -e \"const {translations} = require\\('./src/i18n.js'\\); console.log\\(Object.keys\\(translations.zh\\).filter\\(k => k.includes\\('route'\\) || k.includes\\('Route'\\) || k.includes\\('drive'\\) || k.includes\\('Drive'\\) || k.includes\\('waypoint'\\) || k.includes\\('Waypoint'\\)\\)\\)\")"
+      "Bash(node -e \"const {translations} = require\\('./src/i18n.js'\\); console.log\\(Object.keys\\(translations.zh\\).filter\\(k => k.includes\\('route'\\) || k.includes\\('Route'\\) || k.includes\\('drive'\\) || k.includes\\('Drive'\\) || k.includes\\('waypoint'\\) || k.includes\\('Waypoint'\\)\\)\\)\")",
+      "Bash(npx asar *)",
+      "Read(//tmp/verify-app/dist/**)",
+      "Bash(rm -rf /tmp/new-build)",
+      "Read(//tmp/new-build/dist/**)",
+      "Bash(rm -rf \"/Applications/iOS Location Master.app\")",
+      "Bash(cp -R \"/Users/zengyingxian/Desktop/changemaps/release/mac-arm64/iOS Location Master.app\" \"/Applications/\")",
+      "Bash(rm -rf /tmp/verify2)",
+      "Read(//tmp/verify2/dist/**)",
+      "Bash(rm -rf /tmp/check-installed)",
+      "Read(//tmp/check-installed/dist/**)",
+      "Bash(xattr -cr \"/Applications/iOS Location Master.app\")",
+      "Bash(cp \"/Users/zengyingxian/Desktop/changemaps/release/mac-arm64/iOS Location Master.app/Contents/Resources/app.asar\" \"/Applications/iOS Location Master.app/Contents/Resources/app.asar\")",
+      "Bash(rm -rf /tmp/final-check)",
+      "Read(//tmp/final-check/dist/**)",
+      "Bash(gh release *)",
+      "Bash(/opt/homebrew/bin/gh release *)",
+      "Bash(/opt/homebrew/bin/gh auth *)",
+      "Bash(hdiutil attach *)",
+      "Bash(hdiutil detach *)",
+      "Bash(wait)",
+      "Bash(cp -R \"/Users/zengyingxian/Desktop/changemaps/release/mac-arm64/iOS Location Master.app/Contents/Resources/python\" \"/Applications/iOS Location Master.app/Contents/Resources/\")"
     ]
   }
 }
