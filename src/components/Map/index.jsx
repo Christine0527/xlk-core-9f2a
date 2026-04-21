@@ -554,10 +554,10 @@ export function Map({
       <TopBar>
         {routeMode ? (
           <HintBadge $green>
-            {routeLoading ? '⏳ 規劃路線中…'
+            {routeLoading ? t.routePlanningHint
               : routeError ? `⚠ ${routeError}`
-              : routedPath ? '🛣 路線已規劃，點地圖繼續加點'
-              : '🗺 點地圖加入路徑點'}
+              : routedPath ? t.routeReadyHint
+              : t.addWaypointHint}
           </HintBadge>
         ) : !coord && !loading && !isActive ? (
           <HintBadge>{t.clickHint}</HintBadge>

@@ -244,7 +244,7 @@ function getErrorSolution(msg) {
 }
 
 export default function App() {
-  const { t, toggle: toggleLang } = useLang()
+  const { t, lang, toggle: toggleLang } = useLang()
   const [onboarded, setOnboarded] = useState(() => !!localStorage.getItem('cm_onboarded'))
   const {
     devices, selectedDevice, setSelectedDevice,
@@ -317,14 +317,14 @@ export default function App() {
         background: `linear-gradient(145deg, ${theme.colors.primary}0d, ${theme.colors.primary}06)`,
         border: `1.5px solid ${theme.colors.primary}44`,
       }}>
-        <CardLabel style={{ color: theme.colors.primary }}>🚦 行駛中</CardLabel>
+        <CardLabel style={{ color: theme.colors.primary }}>{t.drivingLabel}</CardLabel>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
           {[
-            { label: '即時速度', val: `${currentSpeedKmh != null ? currentSpeedKmh.toFixed(1) : '—'} km/h` },
-            { label: '剩餘距離', val: fmtDist(remainingDist) },
-            { label: '剩餘時間', val: fmtTime(remainingEta) },
-            { label: '計畫速度', val: `${activeRoute.speedKmh} km/h` },
+            { label: t.currentSpeedLabel, val: `${currentSpeedKmh != null ? currentSpeedKmh.toFixed(1) : '—'} km/h` },
+            { label: t.remainDistLabel,   val: fmtDist(remainingDist) },
+            { label: t.remainTimeLabel,   val: fmtTime(remainingEta) },
+            { label: t.plannedSpeedLabel, val: `${activeRoute.speedKmh} km/h` },
           ].map(item => (
             <div key={item.label} style={{
               background: theme.colors.surfaceHover,
@@ -346,14 +346,14 @@ export default function App() {
         </div>
 
         <ActionBtn $danger onClick={stopLocation}>
-          ⏹ 取消路線
+          {t.cancelRoute}
         </ActionBtn>
       </Card>
     )
   } else if (routeMode) {
     sidebarPanel = (
       <Card>
-        <CardLabel>🗺 路徑模式</CardLabel>
+        <CardLabel>{t.routeModeCardLabel}</CardLabel>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {TRANSPORT_MODES.map(m => (
@@ -379,7 +379,7 @@ export default function App() {
               }}
             >
               <span style={{ fontSize: 26 }}>{m.label.split(' ')[0]}</span>
-              <span>{m.label.split(' ')[1]}</span>
+              <span>{lang === 'en' ? m.nameEn : m.label.split(' ')[1]}</span>
               <span style={{ marginLeft: 'auto', fontSize: 14, opacity: 0.75 }}>{m.speedKmh} km/h</span>
             </button>
           ))}
@@ -395,7 +395,7 @@ export default function App() {
           marginBottom: 10,
           fontWeight: 500,
         }}>
-          {routeInfo?.routeLoading ? '⏳ 規劃道路路線中…'
+          {routeInfo?.routeLoading ? t.routePlanning
             : routeInfo?.routeError ? (
               <span>
                 <span>⚠ {routeInfo.routeError}</span>
@@ -406,18 +406,18 @@ export default function App() {
                 )}
               </span>
             )
-            : routeInfo?.hasPath ? '✓ 已規劃道路路線'
+            : routeInfo?.hasPath ? t.routeReady
             : routeInfo?.waypointCount >= 1
-              ? `📍 已加入 ${routeInfo.waypointCount} 個點，再點地圖繼續`
-              : '點地圖開始加入路徑點'}
+              ? t.waypointAdded.replace('{n}', routeInfo.waypointCount)
+              : t.waypointHint}
         </div>
 
         {routeInfo?.waypointCount >= 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
             {[
-              { label: '距離', val: fmtDist(routeInfo.routedDist) },
-              { label: '時間', val: fmtTime(routeInfo.etaSec) },
-              { label: '速度', val: `${TRANSPORT_MODES.find(m => m.key === transport)?.speedKmh} km/h` },
+              { label: t.distanceLabel, val: fmtDist(routeInfo.routedDist) },
+              { label: t.timeLabel,     val: fmtTime(routeInfo.etaSec) },
+              { label: t.speedLabel,    val: `${TRANSPORT_MODES.find(m => m.key === transport)?.speedKmh} km/h` },
             ].map(item => (
               <div key={item.label} style={{
                 background: theme.colors.surfaceHover,
@@ -445,10 +445,10 @@ export default function App() {
             onClick={() => routeInfo?.onStart?.()}
             disabled={!routeInfo?.onStart}
           >
-            ▶ 開始行駛
+            {t.startDrive}
           </ActionBtn>
           <ActionBtn $danger onClick={() => { setRouteMode(false); setRouteInfo(null) }}>
-            ✕ 取消路徑模式
+            {t.cancelRouteMode}
           </ActionBtn>
         </div>
       </Card>
@@ -467,20 +467,20 @@ export default function App() {
             fontSize: 20, fontWeight: 700,
             color: theme.colors.textPrimary, marginBottom: 6,
           }}>
-            路徑模式
+            {t.routeModeTitle}
           </div>
           <div style={{
             fontSize: 15, color: theme.colors.textSecondary,
             lineHeight: 1.6, marginBottom: 14,
           }}>
-            在地圖點選路徑點，自動規劃沿著真實道路行走的路線，支援步行、機車、汽車速度模擬。
+            {t.routeModeDesc}
           </div>
           <ActionBtn
             $primary
             onClick={() => { setRouteMode(true); setRouteInfo(null) }}
             disabled={!udid}
           >
-            開始規劃路線 →
+            {t.startPlanRoute}
           </ActionBtn>
         </div>
 

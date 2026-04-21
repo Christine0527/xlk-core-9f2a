@@ -1,8 +1,8 @@
 // ─── 交通工具設定 ─────────────────────────────────────────────
 export const TRANSPORT_MODES = [
-  { key: 'walk', label: '🚶 步行', speed: 1.4,  speedKmh: 5  },
-  { key: 'moto', label: '🛵 機車', speed: 8.33, speedKmh: 30 },
-  { key: 'car',  label: '🚗 汽車', speed: 13.9, speedKmh: 50 },
+  { key: 'walk', label: '🚶 步行', nameEn: 'Walk',    speed: 1.4,  speedKmh: 5  },
+  { key: 'moto', label: '🛵 機車', nameEn: 'Scooter', speed: 8.33, speedKmh: 30 },
+  { key: 'car',  label: '🚗 汽車', nameEn: 'Car',     speed: 13.9, speedKmh: 50 },
 ]
 
 export const SPEED_MODES = [

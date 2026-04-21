@@ -33,6 +33,36 @@ export const translations = {
     // Toast
     loadingToast:   '正在設定定位，請稍候（約 10–15 秒）…',
 
+    // Route Mode — idle card
+    routeModeTitle:    '路徑模式',
+    routeModeDesc:     '在地圖點選路徑點，自動規劃沿著真實道路行走的路線，支援步行、機車、汽車速度模擬。',
+    startPlanRoute:    '開始規劃路線 →',
+
+    // Route Mode — active panel
+    routeModeCardLabel:'🗺 路徑模式',
+    routePlanning:     '⏳ 規劃道路路線中…',
+    routeReady:        '✓ 已規劃道路路線',
+    waypointAdded:     '📍 已加入 {n} 個點，再點地圖繼續',
+    waypointHint:      '點地圖開始加入路徑點',
+    distanceLabel:     '距離',
+    timeLabel:         '時間',
+    speedLabel:        '速度',
+    startDrive:        '▶ 開始行駛',
+    cancelRouteMode:   '✕ 取消路徑模式',
+
+    // Driving panel
+    drivingLabel:      '🚦 行駛中',
+    currentSpeedLabel: '即時速度',
+    remainDistLabel:   '剩餘距離',
+    remainTimeLabel:   '剩餘時間',
+    plannedSpeedLabel: '計畫速度',
+    cancelRoute:       '⏹ 取消路線',
+
+    // Map route hints
+    routePlanningHint: '⏳ 規劃路線中…',
+    routeReadyHint:    '🛣 路線已規劃，點地圖繼續加點',
+    addWaypointHint:   '🗺 點地圖加入路徑點',
+
     // Lang toggle
     langToggle:     'EN',
   },
@@ -65,6 +95,36 @@ export const translations = {
     stopBtn:        '⏹ Stop Spoof',
 
     loadingToast:   'Setting location, please wait (~10–15 sec)…',
+
+    // Route Mode — idle card
+    routeModeTitle:    'Route Mode',
+    routeModeDesc:     'Click waypoints on the map to auto-plan a road route. Supports walk, scooter, and car speed simulation.',
+    startPlanRoute:    'Plan a Route →',
+
+    // Route Mode — active panel
+    routeModeCardLabel:'🗺 Route Mode',
+    routePlanning:     '⏳ Planning route…',
+    routeReady:        '✓ Route planned',
+    waypointAdded:     '📍 {n} point(s) added, click map to continue',
+    waypointHint:      'Click map to add waypoints',
+    distanceLabel:     'Distance',
+    timeLabel:         'Time',
+    speedLabel:        'Speed',
+    startDrive:        '▶ Start Driving',
+    cancelRouteMode:   '✕ Cancel Route Mode',
+
+    // Driving panel
+    drivingLabel:      '🚦 Driving',
+    currentSpeedLabel: 'Current Speed',
+    remainDistLabel:   'Remaining',
+    remainTimeLabel:   'ETA',
+    plannedSpeedLabel: 'Planned Speed',
+    cancelRoute:       '⏹ Stop Route',
+
+    // Map route hints
+    routePlanningHint: '⏳ Planning route…',
+    routeReadyHint:    '🛣 Route planned, click to add more',
+    addWaypointHint:   '🗺 Click map to add waypoints',
 
     langToggle:     '中',
   },
