@@ -153,7 +153,7 @@ export function DeviceStatus({ devices, selected, onSelect, onMount, mounting, m
   return (
     <Bar>
       <Left />
-      <Logo>📍 Change<span>Maps</span></Logo>
+      <Logo>📍 iOS Location<span> Master</span></Logo>
       <Dot $active={devices.length > 0} />
       {devices.length === 0 ? (
         <NoDevice>{t.noDevice}</NoDevice>

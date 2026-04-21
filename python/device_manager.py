@@ -28,6 +28,14 @@ class DeviceManager:
                         })
                     except Exception as e:
                         logger.warning(f'Cannot read device {d.serial}: {e}')
+                        # 裝置 USB 已接上但 lockdown 暫時失敗（鎖屏、尚未信任等）
+                        # 仍回傳裝置讓前端顯示，避免 modal 誤跳出
+                        result.append({
+                            'udid': d.serial,
+                            'name': 'iPhone',
+                            'ios_version': None,
+                            'model': None,
+                        })
                 return result
             except Exception as e:
                 last_exc = e

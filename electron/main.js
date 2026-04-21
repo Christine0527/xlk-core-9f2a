@@ -42,18 +42,17 @@ async function ensureTunneld() {
     ? path.join(process.resourcesPath, 'python', isWin ? 'root_bridge.exe' : 'root_bridge')
     : path.join(__dirname, '../python/root_bridge.py')
 
-  // 殺掉舊的 bridge 程序
-  await killOldBridge()
-  await new Promise(r => setTimeout(r, 800))
-
   // 清除舊的 port 檔案
   try { fs.unlinkSync(BRIDGE_PORT_FILE) } catch {}
 
   return new Promise((resolve) => {
     if (isMac) {
+      // Mac: kill + start 合併成一個 osascript 呼叫，只彈一次密碼
       startBridgeMac(python3, scriptPath, resolve)
     } else {
-      startBridgeWin(python3, scriptPath, resolve)
+      killOldBridge().then(() => {
+        setTimeout(() => startBridgeWin(python3, scriptPath, resolve), 800)
+      })
     }
   })
 }
@@ -73,22 +72,22 @@ function killOldBridge() {
 }
 
 function startBridgeMac(python3, scriptPath, resolve) {
-  let cmd
+  let startCmd
   if (app.isPackaged) {
-    // 打包模式：直接執行 PyInstaller 包好的 binary
     const tmpBin = '/tmp/root_bridge_bin'
     try { fs.unlinkSync(tmpBin) } catch {}
     fs.copyFileSync(scriptPath, tmpBin)
     fs.chmodSync(tmpBin, '755')
-    cmd = `${tmpBin} > /tmp/root_bridge.log 2>&1 &`
+    startCmd = `${tmpBin} > /tmp/root_bridge.log 2>&1 &`
   } else {
-    // 開發模式：跑 Python 腳本
     try { fs.unlinkSync('/tmp/root_bridge.py') } catch {}
     fs.copyFileSync(scriptPath, '/tmp/root_bridge.py')
-    cmd = `${python3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &`
+    startCmd = `${python3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &`
   }
 
-  const osascriptCmd = `do shell script "${cmd}" with administrator privileges`
+  // kill + start 在同一個 osascript 呼叫 → 只彈一次密碼
+  const combined = `pkill -f root_bridge || true; sleep 1; ${startCmd}`
+  const osascriptCmd = `do shell script "${combined}" with administrator privileges`
 
   exec(`osascript -e '${osascriptCmd}'`, (err) => {
     if (err) {

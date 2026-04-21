@@ -206,6 +206,19 @@ const LoadingToast = styled(ToastBase)`
 const ErrorToast = styled(ToastBase)`
   border: 1.5px solid ${theme.colors.error}44;
   color: ${theme.colors.error};
+  white-space: normal;
+  border-radius: ${theme.radii.lg};
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 360px;
+  text-align: left;
+`
+
+const ErrorSolution = styled.span`
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.75;
 `
 
 const Spinner = styled.span`
@@ -219,12 +232,23 @@ const Spinner = styled.span`
   flex-shrink: 0;
 `
 
+function getErrorSolution(msg) {
+  if (!msg) return null
+  if (msg.includes('取消授權') || msg.includes('啟動失敗')) return '請重新點擊連接按鈕並輸入管理員密碼'
+  if (msg.includes('逾時')) return '請稍後再試'
+  if (msg.includes('無法連線至路線規劃')) return '請確認網路連線，或按 Shift+R 重整'
+  if (msg.includes('路線規劃失敗')) return '請稍後再試，或按 Shift+R 重整'
+  if (msg.includes('找不到可行路線')) return '請調整路徑點後重試'
+  if (msg.includes('定位失敗') || msg.includes('定位設定失敗')) return '請確認裝置螢幕保持解鎖，如問題持續請按 Shift+R 重整'
+  return '如問題持續請按 Shift+R 重整'
+}
+
 export default function App() {
   const { t, toggle: toggleLang } = useLang()
   const [onboarded, setOnboarded] = useState(() => !!localStorage.getItem('cm_onboarded'))
   const {
     devices, selectedDevice, setSelectedDevice,
-    mounting, mountDDI, deviceStatus, error: deviceError
+    mounting, mountDDI, deviceStatus, error: deviceError, initialized: deviceInitialized
   } = useDevice()
   const udid = selectedDevice?.udid
   const [routeMode, setRouteMode] = useState(false)
@@ -372,7 +396,16 @@ export default function App() {
           fontWeight: 500,
         }}>
           {routeInfo?.routeLoading ? '⏳ 規劃道路路線中…'
-            : routeInfo?.routeError ? `⚠ ${routeInfo.routeError}`
+            : routeInfo?.routeError ? (
+              <span>
+                <span>⚠ {routeInfo.routeError}</span>
+                {getErrorSolution(routeInfo.routeError) && (
+                  <span style={{ display: 'block', fontSize: 12, fontWeight: 400, opacity: 0.7, marginTop: 2 }}>
+                    → {getErrorSolution(routeInfo.routeError)}
+                  </span>
+                )}
+              </span>
+            )
             : routeInfo?.hasPath ? '✓ 已規劃道路路線'
             : routeInfo?.waypointCount >= 1
               ? `📍 已加入 ${routeInfo.waypointCount} 個點，再點地圖繼續`
@@ -455,7 +488,7 @@ export default function App() {
     )
   }
 
-  const noDevice = devices.length === 0
+  const noDevice = deviceInitialized && devices.length === 0
 
   return (
     <>
@@ -546,48 +579,8 @@ export default function App() {
 
           {sidebarPanel}
 
-          {/* 使用須知 */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #fffbea, #fff8dc)',
-              border: '1.5px solid #f0d060',
-              borderRadius: theme.radii.lg,
-              padding: '12px 14px',
-              boxShadow: '0 2px 8px rgba(240,208,96,0.15)',
-            }}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  fontSize: 15, fontWeight: 700, color: '#92600a',
-                  marginBottom: 3,
-                }}>
-                  ⚠️ 使用前請確認
-                </div>
-                <div style={{ fontSize: 13, color: '#b07820', fontWeight: 500 }}>
-                  以下設定適用於 iPhone 手機
-                </div>
-              </div>
-              {[
-                ['🔧', '開啟開發者模式 (iPhone)', '設定 → 隱私權與安全性 → 開發者模式'],
-                ['🔓', '保持手機解鎖', '鎖屏時無法接收模擬定位'],
-                ['🗺', '開啟地圖 App', '先開啟 Apple 地圖或 Google Maps'],
-                ['📍', '定位服務已開啟', '設定 → 隱私權與安全性 → 定位服務'],
-              ].map(([icon, title, desc]) => (
-                <div key={title} style={{
-                  display: 'flex', gap: 8, alignItems: 'flex-start',
-                  marginBottom: 7, fontSize: 11.5,
-                }}>
-                  <span style={{ flexShrink: 0 }}>{icon}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#5a3e00', fontSize: 15 }}>{title}</div>
-                    <div style={{ color: '#8a6a20', fontSize: 14, marginTop: 3 }}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: 'center', padding: '6px 0 2px' }}>
-              iOS Location Master v1.2.0
-            </div>
+          <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: 'center', padding: '14px 0 2px' }}>
+            iOS Location Master v1.2.0
           </div>
         </Sidebar>
 
@@ -615,7 +608,12 @@ export default function App() {
         </LoadingToast>
       )}
       {locationError && !loading && (
-        <ErrorToast>⚠ {locationError}</ErrorToast>
+        <ErrorToast>
+          <span>⚠ {locationError}</span>
+          {getErrorSolution(locationError) && (
+            <ErrorSolution>→ {getErrorSolution(locationError)}</ErrorSolution>
+          )}
+        </ErrorToast>
       )}
     </>
   )

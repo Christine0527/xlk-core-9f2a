@@ -46,7 +46,10 @@
       "Bash(grep *)",
       "Bash(git *)",
       "Bash(open http://localhost:8765)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(npm install *)",
+      "Bash(open *)",
+      "Bash(gh repo *)"
     ]
   }
 }
