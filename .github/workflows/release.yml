@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─── Mac 版本（.dmg）────────────────────────────────
+  # ─── Mac 版本 ────────────────────────────────────────
   build-mac:
     runs-on: macos-latest
     steps:
@@ -62,26 +62,47 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build Vite
-        run: npx vite build
+      # ── 正式版 ──
+      - name: Build Vite (正式版)
+        run: IS_TRIAL=false npx vite build
 
-      - name: Build Mac app (arm64)
+      - name: Build Mac arm64 (正式版)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --mac --arm64 --publish never
 
-      - name: Build Mac app (x64)
+      - name: Build Mac x64 (正式版)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --mac --x64 --publish never
 
-      - name: Upload Mac DMG
+      # ── 試用版 ──
+      - name: Build Vite (試用版)
+        run: IS_TRIAL=true npx vite build
+
+      - name: Build Mac arm64 (試用版)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npx electron-builder --mac --arm64 --publish never
+
+      - name: Rename Trial arm64 DMG
+        run: mv release/iOS-Location-Master-arm64.dmg release/iOS-Location-Master-Trial-arm64.dmg
+
+      - name: Build Mac x64 (試用版)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npx electron-builder --mac --x64 --publish never
+
+      - name: Rename Trial x64 DMG
+        run: mv release/iOS-Location-Master-x64.dmg release/iOS-Location-Master-Trial-x64.dmg
+
+      - name: Upload Mac artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mac-installer
           path: release/*.dmg
 
-  # ─── Windows 版本（.exe 安裝包）─────────────────────
+  # ─── Windows 版本 ────────────────────────────────────
   build-win:
     runs-on: windows-latest
     steps:
@@ -133,28 +154,41 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build Windows app
+      # ── 正式版 ──
+      - name: Build Windows (正式版)
         run: npx vite build && npx electron-builder --win --publish never
+        env:
+          IS_TRIAL: 'false'
 
-      - name: Upload Windows installer
+      # ── 試用版 ──
+      - name: Build Windows (試用版)
+        run: npx vite build && npx electron-builder --win --publish never
+        env:
+          IS_TRIAL: 'true'
+
+      - name: Rename Trial EXE
+        run: Rename-Item release\iOS-Location-Master-Setup.exe iOS-Location-Master-Trial-Setup.exe
+        shell: powershell
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: win-installer
           path: release/*.exe
 
-  # ─── 發佈到 public repo（changemaps-releases）─────────
+  # ─── 發佈到 changemaps-releases ──────────────────────
   create-release:
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - name: Download Mac artifact
+      - name: Download Mac artifacts
         uses: actions/download-artifact@v4
         with:
           name: mac-installer
           path: artifacts/mac
 
-      - name: Download Win artifact
+      - name: Download Win artifacts
         uses: actions/download-artifact@v4
         with:
           name: win-installer
