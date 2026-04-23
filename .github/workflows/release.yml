@@ -7,9 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─── Mac 版本 ────────────────────────────────────────
+  # ─── Mac 版本（直接上傳到 release，不經過 artifact）────
   build-mac:
     runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
 
@@ -98,15 +99,18 @@ jobs:
       - name: Rename Trial x64 DMG
         run: mv release/iOS-Location-Master-x64.dmg release/iOS-Location-Master-Trial-x64.dmg
 
-      - name: Upload Mac artifacts
-        uses: actions/upload-artifact@v4
+      - name: Publish Mac DMGs directly to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: mac-installer
-          path: release/*.dmg
+          draft: false
+          files: release/*.dmg
+          repository: Christine0527/changemaps-releases
+          token: ${{ secrets.RELEASE_TOKEN }}
 
-  # ─── Windows 版本 ────────────────────────────────────
+  # ─── Windows 版本（直接上傳到 release，不經過 artifact）─
   build-win:
     runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
 
@@ -172,36 +176,10 @@ jobs:
         run: Rename-Item release\iOS-Location-Master-Setup.exe iOS-Location-Master-Trial-Setup.exe
         shell: powershell
 
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: win-installer
-          path: release/*.exe
-
-  # ─── 發佈到 changemaps-releases ──────────────────────
-  create-release:
-    needs: [build-mac, build-win]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Download Mac artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-installer
-          path: artifacts/mac
-
-      - name: Download Win artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: win-installer
-          path: artifacts/win
-
-      - name: Create Release on public repo
+      - name: Publish Windows EXEs directly to release
         uses: softprops/action-gh-release@v2
         with:
           draft: false
-          files: |
-            artifacts/mac/*.dmg
-            artifacts/win/*.exe
+          files: release/*.exe
           repository: Christine0527/changemaps-releases
           token: ${{ secrets.RELEASE_TOKEN }}
