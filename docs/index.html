@@ -428,24 +428,34 @@
 
     footer a { color: var(--accent); text-decoration: none; }
 
-    /* ── macOS notice ── */
-    .mac-notice {
+    /* ── OS notices ── */
+    .mac-notice, .win-notice {
       margin-top: 28px;
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      background: #fffbe6;
-      border: 1px solid #facc15;
       border-radius: 12px;
       padding: 16px 20px;
       max-width: 560px;
+      width: 100%;
       text-align: left;
       font-size: 0.85rem;
       line-height: 1.65;
+    }
+
+    .mac-notice {
+      background: #fffbe6;
+      border: 1px solid #facc15;
       color: #78350f;
     }
 
-    .mac-notice-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .win-notice {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      color: #1e3a5f;
+    }
+
+    .mac-notice-icon, .win-notice-icon { font-size: 1.4rem; flex-shrink: 0; }
 
     .mac-notice code {
       display: inline-block;
@@ -474,9 +484,9 @@
 
     .copy-btn:hover { background: var(--accent2); }
 
-    .mac-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .mac-steps, .win-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 
-    .mac-step {
+    .mac-step, .win-step {
       display: flex;
       align-items: flex-start;
       gap: 10px;
@@ -490,6 +500,21 @@
       height: 22px;
       border-radius: 50%;
       background: #d97706;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .win-step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2563eb;
       color: #fff;
       font-size: 0.75rem;
       font-weight: 700;
@@ -578,6 +603,31 @@
             <span class="dl-btn-sub">Windows 10 / 11</span>
           </span>
         </a>
+      </div>
+    </div>
+
+    <div class="win-notice" id="win-notice" style="display:none">
+      <div class="win-notice-icon">🛡️</div>
+      <div>
+        <strong>Windows 使用者注意</strong>：Edge / Chrome 可能顯示安全警告，這是因為安裝檔尚未通過微軟驗證，屬正常現象，請按以下步驟繼續：
+        <div class="win-steps">
+          <div class="win-step">
+            <span class="win-step-num">1</span>
+            <span>下載列表出現三角形警告 → 點右側的「<strong>...</strong>」（更多選項）</span>
+          </div>
+          <div class="win-step">
+            <span class="win-step-num">2</span>
+            <span>選擇「<strong>保留</strong>」</span>
+          </div>
+          <div class="win-step">
+            <span class="win-step-num">3</span>
+            <span>若出現 SmartScreen 頁面 → 點「<strong>其他資訊</strong>」→ 再點「<strong>仍要執行</strong>」</span>
+          </div>
+          <div class="win-step">
+            <span class="win-step-num">4</span>
+            <span>安裝時 UAC 彈窗 → 點「<strong>是</strong>」即完成</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -769,9 +819,10 @@
   <script>
     const REPO = 'Christine0527/changemaps-releases'
 
-    // 只對 macOS 使用者顯示 Gatekeeper 提示
     const isMac = /Mac|Macintosh|MacIntel/.test(navigator.userAgent)
+    const isWin = /Windows/.test(navigator.userAgent)
     if (isMac) document.getElementById('mac-notice').style.display = 'flex'
+    if (isWin) document.getElementById('win-notice').style.display = 'flex'
 
     let macFilename = 'iOS-Location-Master-arm64.dmg'
 
