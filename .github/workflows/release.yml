@@ -87,6 +87,11 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --mac --x64 --publish never
 
+      - name: Save 正式版 DMGs（避免被試用版覆蓋）
+        run: |
+          mv release/iOS-Location-Master-arm64.dmg release/iOS-Location-Master-arm64-SAVE.dmg
+          mv release/iOS-Location-Master-x64.dmg release/iOS-Location-Master-x64-SAVE.dmg
+
       # ── 試用版 ──
       - name: Build Vite (試用版)
         run: IS_TRIAL=true npx vite build
@@ -106,6 +111,11 @@ jobs:
 
       - name: Rename Trial x64 DMG
         run: mv release/iOS-Location-Master-x64.dmg release/iOS-Location-Master-Trial-x64.dmg
+
+      - name: Restore 正式版 DMGs
+        run: |
+          mv release/iOS-Location-Master-arm64-SAVE.dmg release/iOS-Location-Master-arm64.dmg
+          mv release/iOS-Location-Master-x64-SAVE.dmg release/iOS-Location-Master-x64.dmg
 
       - name: Publish Mac DMGs directly to release
         uses: softprops/action-gh-release@v2
@@ -179,6 +189,10 @@ jobs:
         env:
           IS_TRIAL: 'false'
 
+      - name: Save 正式版 EXE（避免被試用版覆蓋）
+        run: Rename-Item release\iOS-Location-Master-Setup.exe iOS-Location-Master-Setup-SAVE.exe
+        shell: powershell
+
       # ── 試用版 ──
       - name: Build Windows (試用版)
         run: npx vite build && npx electron-builder --win --publish never
@@ -187,6 +201,10 @@ jobs:
 
       - name: Rename Trial EXE
         run: Rename-Item release\iOS-Location-Master-Setup.exe iOS-Location-Master-Trial-Setup.exe
+        shell: powershell
+
+      - name: Restore 正式版 EXE
+        run: Rename-Item release\iOS-Location-Master-Setup-SAVE.exe iOS-Location-Master-Setup.exe
         shell: powershell
 
       - name: Publish Windows EXEs directly to release
