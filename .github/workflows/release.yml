@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # ─── Mac 版本（直接上傳到 release，不經過 artifact）────
   build-mac:
