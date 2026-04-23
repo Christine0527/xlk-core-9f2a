@@ -44,7 +44,7 @@ async function ensurePrivilegesSetup() {
   // 先把內容寫到 /tmp，再用 osascript 搬到 /etc/sudoers.d（避免引號衝突）
   const tmpFile = '/tmp/ios-location-master-sudoers'
   const content = [
-    `%admin ALL=(root) NOPASSWD: /tmp/root_bridge_bin`,
+    `%admin ALL=(root) NOPASSWD: /tmp/root_bridge_dir/root_bridge`,
     `%admin ALL=(root) NOPASSWD: ${python3} /tmp/root_bridge.py`,
     `%admin ALL=(root) NOPASSWD: /usr/bin/pkill`,
     '',
@@ -67,7 +67,9 @@ async function ensureTunneld() {
 
   const python3 = await findPython()
   const scriptPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'python', isWin ? 'root_bridge.exe' : 'root_bridge')
+    ? isWin
+      ? path.join(process.resourcesPath, 'python', 'root_bridge.exe')
+      : path.join(process.resourcesPath, 'python', 'root_bridge')  // onedir: directory
     : path.join(__dirname, '../python/root_bridge.py')
 
   // 清除舊的 port 檔案
@@ -99,11 +101,14 @@ function killOldBridge() {
 }
 
 function startBridgeMac(python3, scriptPath, resolve) {
-  const tmpBin = '/tmp/root_bridge_bin'
+  // scriptPath: packaged = root_bridge/ 目錄 (onedir), dev = root_bridge.py 檔案
+  const tmpDir = '/tmp/root_bridge_dir'
+  const tmpBin = `${tmpDir}/root_bridge`
 
   if (app.isPackaged) {
-    try { fs.unlinkSync(tmpBin) } catch {}
-    fs.copyFileSync(scriptPath, tmpBin)
+    // 複製整個 onedir 目錄到 /tmp，讓 sudo 有固定路徑可執行
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }) } catch {}
+    fs.cpSync(scriptPath, tmpDir, { recursive: true })
     fs.chmodSync(tmpBin, '755')
   } else {
     try { fs.unlinkSync('/tmp/root_bridge.py') } catch {}
@@ -135,7 +140,7 @@ function startBridgeMac(python3, scriptPath, resolve) {
       const combined = `pkill -f root_bridge || true; sleep 1; ${rawStart}`
       exec(`osascript -e 'do shell script "${combined}" with administrator privileges'`, (err) => {
         if (err) { resolve({ ok: false, error: '啟動失敗' }); return }
-        ensurePrivilegesSetup().catch(() => {})  // 補建 sudoers，下次就不需要密碼了
+        ensurePrivilegesSetup().catch(() => {})
         waitForBridgeReady(resolve)
       })
     }
@@ -256,9 +261,10 @@ async function startPython() {
 
   let spawnCmd, spawnArgs
   if (app.isPackaged) {
-    // 打包模式：使用 PyInstaller 打包的可執行檔（不需要用戶安裝 Python）
-    const exeName = isWin ? 'server.exe' : 'server'
-    spawnCmd = path.join(process.resourcesPath, 'python', exeName)
+    // 打包模式：Windows onefile (.exe)，Mac onedir (子目錄內的執行檔)
+    spawnCmd = isWin
+      ? path.join(process.resourcesPath, 'python', 'server.exe')
+      : path.join(process.resourcesPath, 'python', 'server', 'server')
     spawnArgs = ['--port', pythonPort]
   } else {
     // 開發模式：直接跑 Python 腳本

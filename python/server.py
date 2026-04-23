@@ -138,10 +138,14 @@ def _ensure_bridge():
 
         logger.info('Starting root_bridge (one-time admin authorization)...')
         if getattr(sys, 'frozen', False):
-            # PyInstaller 打包模式：root_bridge binary 在 server 同一層目錄
-            bin_dir = os.path.dirname(sys.executable)
-            bridge_name = 'root_bridge.exe' if sys.platform == 'win32' else 'root_bridge'
-            script_path = os.path.join(bin_dir, bridge_name)
+            if sys.platform == 'win32':
+                # Windows onefile: root_bridge.exe 與 server.exe 同目錄
+                bin_dir = os.path.dirname(sys.executable)
+                script_path = os.path.join(bin_dir, 'root_bridge.exe')
+            else:
+                # Mac onedir: server 在 python/server/server，root_bridge 在 python/root_bridge/
+                python_dir = os.path.dirname(os.path.dirname(sys.executable))
+                script_path = os.path.join(python_dir, 'root_bridge')
         else:
             # 開發模式：使用 .py 腳本
             script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -168,12 +172,11 @@ def _ensure_bridge():
 def _start_bridge_macos(script_path: str):
     """macOS：以 root 身分啟動 root_bridge（sudoers 可用則無密碼，否則用 osascript）"""
     if getattr(sys, 'frozen', False):
-        tmp_bin = '/tmp/root_bridge_bin'
-        try:
-            os.remove(tmp_bin)
-        except FileNotFoundError:
-            pass
-        shutil.copyfile(script_path, tmp_bin)
+        # onedir: script_path 是 root_bridge/ 目錄，複製整個目錄到 /tmp
+        tmp_dir = '/tmp/root_bridge_dir'
+        tmp_bin = os.path.join(tmp_dir, 'root_bridge')
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        shutil.copytree(script_path, tmp_dir)
         os.chmod(tmp_bin, 0o755)
         sudo_cmd = f'sudo -n {tmp_bin} > /tmp/root_bridge.log 2>&1 &'
         raw_cmd  = f'{tmp_bin} > /tmp/root_bridge.log 2>&1 &'

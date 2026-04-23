@@ -45,11 +45,7 @@
       "extraResources": [
         {
           "from": "python-dist/mac/",
-          "to": "python/",
-          "filter": [
-            "server",
-            "root_bridge"
-          ]
+          "to": "python/"
         }
       ]
     },
