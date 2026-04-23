@@ -109,8 +109,7 @@ jobs:
         with:
           draft: false
           files: release/*.dmg
-          repository: Christine0527/changemaps-releases
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   # ─── Windows 版本（直接上傳到 release，不經過 artifact）─
   build-win:
@@ -192,5 +191,4 @@ jobs:
         with:
           draft: false
           files: release/*.exe
-          repository: Christine0527/changemaps-releases
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
