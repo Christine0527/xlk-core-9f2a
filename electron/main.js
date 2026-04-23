@@ -20,6 +20,8 @@ let pythonProcess
 let pythonPort
 let tunneldStarted = false
 
+const SUDOERS_FILE = '/etc/sudoers.d/ios-location-master'
+
 // ─── 找 Python 執行檔 ─────────────────────────────────
 async function findPython() {
   const candidates = isWin
@@ -31,6 +33,32 @@ async function findPython() {
     if (ok) return p
   }
   return isWin ? 'python' : 'python3'
+}
+
+// ─── 一次性設定 sudoers（之後永不需要再輸密碼）──────────
+async function ensurePrivilegesSetup() {
+  if (!isMac) return
+  try { fs.accessSync(SUDOERS_FILE, fs.constants.F_OK); return } catch {}
+
+  const python3 = await findPython()
+  // 先把內容寫到 /tmp，再用 osascript 搬到 /etc/sudoers.d（避免引號衝突）
+  const tmpFile = '/tmp/ios-location-master-sudoers'
+  const content = [
+    `%admin ALL=(root) NOPASSWD: /tmp/root_bridge_bin`,
+    `%admin ALL=(root) NOPASSWD: ${python3} /tmp/root_bridge.py`,
+    `%admin ALL=(root) NOPASSWD: /usr/bin/pkill`,
+    '',
+  ].join('\n')
+  fs.writeFileSync(tmpFile, content, { mode: 0o644 })
+
+  const cmd = `cp ${tmpFile} ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}`
+  await new Promise((resolve) => {
+    exec(`osascript -e 'do shell script "${cmd}" with administrator privileges'`, (err) => {
+      if (err) console.warn('[Privileges] one-time setup failed:', err.message)
+      try { fs.unlinkSync(tmpFile) } catch {}
+      resolve()
+    })
+  })
 }
 
 // ─── 啟動 root_bridge（iOS 17+ 需要管理員）────────────
@@ -60,8 +88,7 @@ async function ensureTunneld() {
 function killOldBridge() {
   return new Promise((resolve) => {
     if (isMac) {
-      exec(`osascript -e 'do shell script "pkill -f root_bridge || true" with administrator privileges'`,
-        () => resolve())
+      exec(`sudo -n /usr/bin/pkill -f root_bridge 2>/dev/null || true`, () => resolve())
     } else {
       exec(
         'powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object {$_.CommandLine -like \'*root_bridge*\'} | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"',
@@ -72,29 +99,46 @@ function killOldBridge() {
 }
 
 function startBridgeMac(python3, scriptPath, resolve) {
-  let startCmd
+  const tmpBin = '/tmp/root_bridge_bin'
+
   if (app.isPackaged) {
-    const tmpBin = '/tmp/root_bridge_bin'
     try { fs.unlinkSync(tmpBin) } catch {}
     fs.copyFileSync(scriptPath, tmpBin)
     fs.chmodSync(tmpBin, '755')
-    startCmd = `${tmpBin} > /tmp/root_bridge.log 2>&1 &`
   } else {
     try { fs.unlinkSync('/tmp/root_bridge.py') } catch {}
     fs.copyFileSync(scriptPath, '/tmp/root_bridge.py')
-    startCmd = `${python3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &`
   }
 
-  // kill + start 在同一個 osascript 呼叫 → 只彈一次密碼
-  const combined = `pkill -f root_bridge || true; sleep 1; ${startCmd}`
-  const osascriptCmd = `do shell script "${combined}" with administrator privileges`
+  const sudoKill  = `sudo -n /usr/bin/pkill -f root_bridge 2>/dev/null || true`
+  const sudoStart = app.isPackaged
+    ? `sudo -n ${tmpBin} > /tmp/root_bridge.log 2>&1 &`
+    : `sudo -n ${python3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &`
 
-  exec(`osascript -e '${osascriptCmd}'`, (err) => {
-    if (err) {
-      resolve({ ok: false, error: '用戶取消授權或啟動失敗' })
-      return
+  // 先探測 sudo 是否可無密碼執行
+  exec('sudo -n /usr/bin/true 2>/dev/null', (probeErr) => {
+    if (!probeErr) {
+      // sudoers 已設定：無密碼啟動
+      exec(sudoKill, () => {
+        setTimeout(() => {
+          exec(sudoStart, (err) => {
+            if (err) { resolve({ ok: false, error: `Bridge 啟動失敗: ${err.message}` }); return }
+            waitForBridgeReady(resolve)
+          })
+        }, 800)
+      })
+    } else {
+      // 退回 osascript（會彈一次密碼，並順便補設 sudoers）
+      const rawStart = app.isPackaged
+        ? `${tmpBin} > /tmp/root_bridge.log 2>&1 &`
+        : `${python3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &`
+      const combined = `pkill -f root_bridge || true; sleep 1; ${rawStart}`
+      exec(`osascript -e 'do shell script "${combined}" with administrator privileges'`, (err) => {
+        if (err) { resolve({ ok: false, error: '啟動失敗' }); return }
+        ensurePrivilegesSetup().catch(() => {})  // 補建 sudoers，下次就不需要密碼了
+        waitForBridgeReady(resolve)
+      })
     }
-    waitForBridgeReady(resolve)
   })
 }
 
@@ -155,7 +199,7 @@ function findFreePort() {
 }
 
 // ─── 等待 Python 服務啟動 ─────────────────────────────
-function waitForPython(port, timeout = 15000) {
+function waitForPython(port, timeout = 40000) {
   const start = Date.now()
   return new Promise((resolve, reject) => {
     const check = () => {
@@ -163,13 +207,13 @@ function waitForPython(port, timeout = 15000) {
         if (res.statusCode === 200) resolve()
       }).on('error', () => {
         if (Date.now() - start > timeout) {
-          reject(new Error('Python server failed to start'))
+          reject(new Error('Python server failed to start within 40s'))
         } else {
           setTimeout(check, 400)
         }
       })
     }
-    setTimeout(check, 600)
+    setTimeout(check, 800)
   })
 }
 
@@ -236,14 +280,12 @@ async function startPython() {
 
 // ─── 建立視窗 ─────────────────────────────────────────
 async function createWindow() {
-  await startPython()
-
+  // 先建視窗，讓用戶看到 app 在啟動，不要等 Python 才開視窗
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 900,
     minHeight: 600,
-    // macOS 用 hiddenInset（膠囊按鈕嵌入標題列），Windows 用預設框架
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     backgroundColor: '#F5ECD7',
     webPreferences: {
@@ -261,13 +303,32 @@ async function createWindow() {
   }
 
   setupAutoUpdater()
+
+  // 背景初始化（不阻塞視窗顯示）
+  try {
+    if (isMac) await ensurePrivilegesSetup()
+    await startPython()
+    console.log('[App] Python ready, notifying renderer')
+    mainWindow?.webContents.send('python:ready', pythonPort)
+  } catch (err) {
+    console.error('[App] Startup error:', err.message)
+    dialog.showErrorBox(
+      '啟動失敗',
+      `後端服務未能啟動，請重新開啟程式。\n\n詳細錯誤：${err.message}`
+    )
+  }
 }
 
 // ─── IPC 路由 ─────────────────────────────────────────
 ipcMain.handle('python:port', () => pythonPort)
 ipcMain.handle('device:list', () => callPython('device.list'))
 ipcMain.handle('device:status', (_, udid) => callPython('device.status', { udid }))
-ipcMain.handle('device:mount', (_, udid) => callPython('device.mount', { udid }))
+ipcMain.handle('device:mount', async (_, udid) => {
+  const result = await callPython('device.mount', { udid })
+  // mount 完成後立即在背景預熱 bridge，不等用戶點地圖
+  ensureTunneld().catch(e => console.warn('[Bridge] pre-warm failed:', e.message))
+  return result
+})
 ipcMain.handle('tunneld:start', () => ensureTunneld())
 ipcMain.handle('location:set', (_, { udid, lat, lng, jitter }) => callPython('location.set', { udid, lat, lng, jitter: !!jitter }))
 ipcMain.handle('location:stop', (_, udid) => callPython('location.stop', { udid }))
@@ -327,7 +388,11 @@ function setupAutoUpdater() {
 app.whenReady().then(createWindow)
 
 app.on('window-all-closed', () => {
-  if (pythonProcess) pythonProcess.kill('SIGTERM')
+  if (pythonProcess) {
+    pythonProcess.kill('SIGTERM')
+    pythonProcess = null
+    pythonPort = null
+  }
   if (!isMac) app.quit()
 })
 

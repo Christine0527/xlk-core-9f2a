@@ -25,6 +25,7 @@ export function useLocation(udid, jitter = false, smoothWalk = false) {
   const [error, setError]               = useState(null)
   const currentRef  = useRef(null)
   const walkAbort   = useRef(null)
+  const genRef      = useRef(0)
   // 追蹤目前 walk loop 何時真正結束
   const walkDone    = useRef(Promise.resolve())
 
@@ -119,6 +120,10 @@ export function useLocation(udid, jitter = false, smoothWalk = false) {
     }
 
     // 一般模式：單點跳位
+    const myGen = ++genRef.current
+    // 立刻把 marker 放到點擊位置，不等 API 回應
+    updateCoord({ lat, lng })
+    setIsActive(true)
     setLoading(true)
     setError(null)
     try {
@@ -127,9 +132,9 @@ export function useLocation(udid, jitter = false, smoothWalk = false) {
       const finalLat = lat + d.dLat
       const finalLng = lng + d.dLng
       await window.api.setLocation(udid, finalLat, finalLng, false)
-      updateCoord({ lat, lng })
-      setIsActive(true)
+      if (genRef.current !== myGen) return
     } catch (e) {
+      if (genRef.current !== myGen) return
       setError(e.message || '定位設定失敗')
     } finally {
       setLoading(false)
@@ -154,6 +159,8 @@ export function useLocation(udid, jitter = false, smoothWalk = false) {
     if (!udid || waypoints.length < 2) return
 
     await cancelCurrent()   // 等前一個 loop 完全結束，不再有任何座標送出
+    ++genRef.current        // 讓所有未完成的 setLocation 過時失效
+    setLoading(false)       // 確保 loading 已清除
 
     const abort = { cancelled: false }
     walkAbort.current = abort
@@ -168,6 +175,9 @@ export function useLocation(udid, jitter = false, smoothWalk = false) {
     const smooth    = preRouted ? waypoints : smoothPath(waypoints, 24)
     const arcTable  = buildArcTable(smooth)
     const totalDist = arcTable[arcTable.length - 1]
+
+    // 立即把 marker 移到路線起點，不等第一個 API 回應
+    if (smooth[0]) updateCoord({ lat: smooth[0].lat, lng: smooth[0].lng })
 
     const drift       = createDriftModel()
     const wanderScale = speed <= 2 ? 1.0 : speed <= 10 ? 0.3 : 0.05

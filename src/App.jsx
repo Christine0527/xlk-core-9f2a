@@ -271,7 +271,7 @@ const TrialModal = styled.div`
 function getErrorSolution(msg) {
   if (!msg) return null
   if (msg.includes('取消授權') || msg.includes('啟動失敗')) return '請重新點擊連接按鈕並輸入管理員密碼'
-  if (msg.includes('逾時')) return '請稍後再試'
+  if (msg.includes('逾時') || msg.includes('root_bridge')) return '請按 Shift+R 重整後再試'
   if (msg.includes('無法連線至路線規劃')) return '請確認網路連線，或按 Shift+R 重整'
   if (msg.includes('路線規劃失敗')) return '請稍後再試，或按 Shift+R 重整'
   if (msg.includes('找不到可行路線')) return '請調整路徑點後重試'
@@ -556,6 +556,15 @@ export default function App() {
 
   const noDevice = deviceInitialized && devices.length === 0
 
+  // Shift+R 全域重整
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.shiftKey && e.key === 'R') window.location.reload()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
     <>
       <GlobalStyle />
@@ -584,6 +593,7 @@ export default function App() {
               border: `1px solid ${theme.colors.border}`,
               borderRadius: theme.radii.md,
               padding: '10px 18px',
+              marginBottom: 12,
             }}>
               <span style={{
                 width: 8, height: 8, borderRadius: '50%',
@@ -593,6 +603,27 @@ export default function App() {
               }} />
               等待裝置連線中…
             </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: theme.colors.textMuted,
+                fontSize: 12,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: theme.radii.sm,
+              }}
+            >
+              按 <kbd style={{
+                background: theme.colors.surfaceHover,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 4,
+                padding: '1px 5px',
+                fontSize: 11,
+                fontFamily: theme.fonts.mono,
+              }}>⇧R</kbd> 重整
+            </button>
           </ModalBox>
         </>
       )}

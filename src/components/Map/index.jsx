@@ -442,6 +442,7 @@ export function Map({
             onStartRoute(path, transportMode.speed, { preRouted: !!routedPath })
             setWaypoints([])
             setRoutedPath(null)
+            setFollow(true)  // 路線開始時重新跟隨地圖
             onToggleRouteMode()
           }
         : null,

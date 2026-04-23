@@ -86,7 +86,6 @@ def _kill_bridge():
     """強制殺掉舊的 root_bridge 程序"""
     try:
         if sys.platform == 'win32':
-            # Windows：嘗試透過 PowerShell 以管理員身份殺掉
             subprocess.run(
                 ['powershell', '-NoProfile', '-Command',
                  'Get-CimInstance Win32_Process | Where-Object {$_.CommandLine -like "*root_bridge*"} | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }'],
@@ -94,7 +93,7 @@ def _kill_bridge():
             )
         else:
             subprocess.run(
-                ['osascript', '-e', 'do shell script "pkill -f root_bridge || true" with administrator privileges'],
+                ['sudo', '-n', '/usr/bin/pkill', '-f', 'root_bridge'],
                 capture_output=True, timeout=10
             )
     except Exception as e:
@@ -167,9 +166,8 @@ def _ensure_bridge():
 
 
 def _start_bridge_macos(script_path: str):
-    """macOS：透過 osascript 以 root 身分啟動"""
+    """macOS：以 root 身分啟動 root_bridge（sudoers 可用則無密碼，否則用 osascript）"""
     if getattr(sys, 'frozen', False):
-        # 打包模式：直接執行 binary
         tmp_bin = '/tmp/root_bridge_bin'
         try:
             os.remove(tmp_bin)
@@ -177,18 +175,25 @@ def _start_bridge_macos(script_path: str):
             pass
         shutil.copyfile(script_path, tmp_bin)
         os.chmod(tmp_bin, 0o755)
-        cmd = f'{tmp_bin} > /tmp/root_bridge.log 2>&1 &'
+        sudo_cmd = f'sudo -n {tmp_bin} > /tmp/root_bridge.log 2>&1 &'
+        raw_cmd  = f'{tmp_bin} > /tmp/root_bridge.log 2>&1 &'
     else:
-        # 開發模式：用 Python 跑腳本
         shutil.copyfile(script_path, '/tmp/root_bridge.py')
-        cmd = f'{PYTHON3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &'
-    osascript_cmd = f'do shell script "{cmd}" with administrator privileges'
-    result = subprocess.run(
-        ['osascript', '-e', osascript_cmd],
-        capture_output=True, text=True, timeout=30
-    )
-    if result.returncode != 0:
-        raise RuntimeError('無法啟動 root bridge：' + (result.stderr.strip() or '用戶取消授權'))
+        sudo_cmd = f'sudo -n {PYTHON3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &'
+        raw_cmd  = f'{PYTHON3} /tmp/root_bridge.py > /tmp/root_bridge.log 2>&1 &'
+
+    # 探測 sudo 是否可無密碼執行
+    probe = subprocess.run(['sudo', '-n', '/usr/bin/true'],
+                           capture_output=True, timeout=5)
+    if probe.returncode == 0:
+        subprocess.run(['bash', '-c', sudo_cmd], capture_output=True, text=True, timeout=30)
+    else:
+        # 退回 osascript（彈一次密碼視窗）
+        osa_script = f'do shell script "{raw_cmd}" with administrator privileges'
+        result = subprocess.run(['osascript', '-e', osa_script],
+                                capture_output=True, text=True, timeout=60)
+        if result.returncode != 0:
+            raise RuntimeError('無法啟動 root bridge：' + (result.stderr.strip() or '用戶取消授權'))
 
 
 def _start_bridge_windows(script_path: str):
@@ -213,6 +218,10 @@ def _start_bridge_windows(script_path: str):
     if result.returncode != 0:
         raise RuntimeError('無法啟動 root bridge：' + (result.stderr.strip() or '用戶取消 UAC 授權'))
 
+
+# ─── Location 序號（確保新的 call 能搶佔舊的 retry loop）──
+_location_seq = 0
+_location_seq_lock = __import__('threading').Lock()
 
 # ─── RPC 分發 ────────────────────────────────────────
 RPC = {}
@@ -276,15 +285,23 @@ def _warmup_bridge():
 # ─── Location RPC（全部走 root_bridge，只需要一次密碼）──
 @rpc('location.set')
 def location_set(udid: str, lat: float, lng: float, jitter: bool = False):
+    global _location_seq
     import random
+    with _location_seq_lock:
+        _location_seq += 1
+        my_seq = _location_seq
+
     _ensure_bridge()
     if jitter:
         lat += random.uniform(-0.000009, 0.000009)
         lng += random.uniform(-0.000009, 0.000009)
     result = _bridge_set(lat, lng)
     if not result.get('ok'):
-        for _ in range(6):
-            time.sleep(3)
+        for _ in range(20):  # 20 × 1s = 最多 20s，但就緒後立即成功
+            time.sleep(1)
+            # 有更新的 location call 進來了，放棄這個過時的 retry
+            if _location_seq != my_seq:
+                return {'ok': True}
             result = _bridge_set(lat, lng)
             if result.get('ok'):
                 break
