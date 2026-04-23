@@ -10,7 +10,21 @@ import socket
 import sys
 import logging
 
-logging.basicConfig(level=logging.INFO, format='[root_bridge] %(message)s')
+# ─── 日誌（Windows 也寫入檔案方便除錯）────────────────────
+if sys.platform == 'win32':
+    import tempfile
+    _log_file = os.path.join(tempfile.gettempdir(), 'root_bridge.log')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[root_bridge] %(message)s',
+        handlers=[
+            logging.FileHandler(_log_file, encoding='utf-8', mode='w'),
+            logging.StreamHandler(),
+        ],
+        force=True,
+    )
+else:
+    logging.basicConfig(level=logging.INFO, format='[root_bridge] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -22,14 +36,19 @@ def _bridge_port_file() -> str:
 
 PORT_FILE = _bridge_port_file()
 
+# iOS 17+ DVT 模式
 _sim = None
 _dvt_provider = None
 _tunnel_cm = None
+
+# iOS < 17 lockdown 模式（每次 call 重建連線）
+_use_lockdown = False
+
 _connecting = False
 
 
 async def _cleanup():
-    global _sim, _dvt_provider, _tunnel_cm
+    global _sim, _dvt_provider, _tunnel_cm, _use_lockdown
     for obj in [_sim, _dvt_provider, _tunnel_cm]:
         if obj is not None:
             try:
@@ -39,9 +58,50 @@ async def _cleanup():
     _sim = None
     _dvt_provider = None
     _tunnel_cm = None
+    _use_lockdown = False
 
 
-async def connect():
+# ─── iOS < 17：SimulateLocationService（sync，每次重建連線）──
+def _lockdown_set_sync(lat: float, lng: float):
+    from pymobiledevice3.usbmux import list_devices
+    from pymobiledevice3.lockdown import LockdownClient
+    from pymobiledevice3.services.simulate_location import SimulateLocationService
+    devices = list_devices()
+    if not devices:
+        raise RuntimeError('No USB devices found')
+    lockdown = LockdownClient(serial=devices[0].serial)
+    with SimulateLocationService(lockdown) as sim:
+        sim.set(lat, lng)
+
+
+def _lockdown_clear_sync():
+    from pymobiledevice3.usbmux import list_devices
+    from pymobiledevice3.lockdown import LockdownClient
+    from pymobiledevice3.services.simulate_location import SimulateLocationService
+    devices = list_devices()
+    if not devices:
+        raise RuntimeError('No USB devices found')
+    lockdown = LockdownClient(serial=devices[0].serial)
+    with SimulateLocationService(lockdown) as sim:
+        sim.clear()
+
+
+def _lockdown_test_sync():
+    """測試 SimulateLocationService 是否可用（不改變位置）"""
+    from pymobiledevice3.usbmux import list_devices
+    from pymobiledevice3.lockdown import LockdownClient
+    from pymobiledevice3.services.simulate_location import SimulateLocationService
+    devices = list_devices()
+    if not devices:
+        raise RuntimeError('No USB devices found')
+    lockdown = LockdownClient(serial=devices[0].serial)
+    with SimulateLocationService(lockdown) as sim:
+        sim.clear()  # clear 是 no-op，用來測試連線
+    logger.info('SimulateLocationService test passed (iOS < 17 mode)')
+
+
+# ─── iOS 17+：DVT tunnel 模式 ─────────────────────────────
+async def _connect_dvt():
     global _sim, _dvt_provider, _tunnel_cm
     from pymobiledevice3.remote.tunnel_service import (
         get_remote_pairing_tunnel_services, start_tunnel, TunnelProtocol
@@ -50,9 +110,7 @@ async def connect():
     from pymobiledevice3.services.dvt.instruments.dvt_provider import DvtProvider
     from pymobiledevice3.services.dvt.instruments.location_simulation import LocationSimulation
 
-    await _cleanup()
-
-    logger.info('Discovering device...')
+    logger.info('Discovering device via tunnel...')
     services = await get_remote_pairing_tunnel_services(bonjour_timeout=15)
     if not services:
         logger.info('remote_pairing not found, trying core_device...')
@@ -64,7 +122,6 @@ async def connect():
     svc = services[0]
     logger.info(f'Found: {svc}')
 
-    # iOS 18.2+ 只支援 TCP；舊版先試 TCP，不行再試 QUIC
     last_err = None
     for protocol in [TunnelProtocol.TCP, TunnelProtocol.QUIC]:
         try:
@@ -88,11 +145,29 @@ async def connect():
 
     sim_cm = LocationSimulation(dvt)
     _sim = await sim_cm.__aenter__()
-    logger.info('Ready to spoof location!')
+    logger.info('Ready (DVT mode, iOS 17+)!')
+
+
+async def connect():
+    global _use_lockdown
+    await _cleanup()
+
+    # 先試 SimulateLocationService（iOS < 17，不需 tunnel，更穩定）
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(None, _lockdown_test_sync)
+        _use_lockdown = True
+        logger.info('Using SimulateLocationService (iOS < 17)')
+        return
+    except Exception as e:
+        logger.info(f'SimulateLocationService unavailable ({e}), trying DVT tunnel...')
+        _use_lockdown = False
+
+    # Fallback：DVT tunnel（iOS 17+）
+    await _connect_dvt()
 
 
 async def _connect_in_background():
-    """背景連接，失敗後自動重試"""
     global _connecting
     _connecting = True
     attempt = 0
@@ -111,7 +186,7 @@ async def _connect_in_background():
 
 
 async def _reconnect_with_retry():
-    global _sim, _connecting
+    global _sim, _use_lockdown, _connecting
     if _connecting:
         return
     _connecting = True
@@ -129,10 +204,11 @@ async def _reconnect_with_retry():
         except Exception as e:
             logger.error(f'Attempt {attempt} failed: {e}')
             _sim = None
+            _use_lockdown = False
 
 
 async def handle_client(reader, writer):
-    global _sim
+    global _sim, _use_lockdown
     try:
         data = await reader.read(256)
         if not data:
@@ -141,7 +217,8 @@ async def handle_client(reader, writer):
         cmd = msg.get('cmd')
 
         if cmd == 'ping':
-            writer.write(json.dumps({'ok': _sim is not None, 'pong': True}).encode())
+            connected = (_sim is not None) or _use_lockdown
+            writer.write(json.dumps({'ok': connected, 'pong': True}).encode())
             return
 
         if cmd == 'shutdown':
@@ -152,30 +229,41 @@ async def handle_client(reader, writer):
             asyncio.get_event_loop().stop()
             return
 
-        if _sim is None:
+        connected = (_sim is not None) or _use_lockdown
+        if not connected:
             writer.write(json.dumps({'ok': False, 'error': '裝置尚未連接，請稍後重試'}).encode())
             return
 
         if cmd == 'set':
             lat, lng = msg['lat'], msg['lng']
             try:
-                await _sim.set(lat, lng)
+                if _sim is not None:
+                    await _sim.set(lat, lng)
+                else:
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, _lockdown_set_sync, lat, lng)
                 writer.write(b'{"ok":true}')
                 logger.info(f'Location set: {lat}, {lng}')
             except Exception as e:
                 logger.warning(f'set failed: {e}, scheduling reconnect...')
                 _sim = None
+                _use_lockdown = False
                 writer.write(json.dumps({'ok': False, 'error': '定位失敗，正在重連中，請稍後再試'}).encode())
                 asyncio.ensure_future(_reconnect_with_retry())
 
         elif cmd == 'stop':
             try:
-                await _sim.clear()
+                if _sim is not None:
+                    await _sim.clear()
+                else:
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, _lockdown_clear_sync)
                 writer.write(b'{"ok":true,"stopped":true}')
                 logger.info('Location stopped')
             except Exception as e:
                 logger.warning(f'stop failed: {e}')
                 _sim = None
+                _use_lockdown = False
                 writer.write(json.dumps({'ok': False, 'error': str(e)}).encode())
                 asyncio.ensure_future(_reconnect_with_retry())
 
@@ -200,18 +288,14 @@ def _find_free_port() -> int:
 
 
 async def main():
-    # 清除舊的 port 檔案
     try:
         os.remove(PORT_FILE)
     except Exception:
         pass
 
     port = _find_free_port()
-
-    # 先啟動 TCP server
     server = await asyncio.start_server(handle_client, '127.0.0.1', port)
 
-    # 寫 port 檔案（讓 server.py / main.js 知道 bridge 已啟動）
     parent_dir = os.path.dirname(PORT_FILE)
     if parent_dir:
         os.makedirs(parent_dir, exist_ok=True)
@@ -219,7 +303,6 @@ async def main():
         f.write(str(port))
     logger.info(f'Listening on 127.0.0.1:{port}  (port file: {PORT_FILE})')
 
-    # 背景連接設備（不阻塞啟動）
     logger.info('Connecting to device in background...')
     asyncio.ensure_future(_connect_in_background())
 

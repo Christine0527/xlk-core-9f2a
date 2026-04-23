@@ -52,6 +52,9 @@ jobs:
             server.py
           pyinstaller --onedir --name root_bridge \
             --hidden-import pymobiledevice3 \
+            --hidden-import pymobiledevice3.usbmux \
+            --hidden-import pymobiledevice3.lockdown \
+            --hidden-import pymobiledevice3.services.simulate_location \
             --hidden-import pymobiledevice3.remote.tunnel_service \
             --hidden-import pymobiledevice3.remote.remote_service_discovery \
             --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider \
@@ -162,6 +165,9 @@ jobs:
             server.py
           pyinstaller --onefile --name root_bridge `
             --hidden-import pymobiledevice3 `
+            --hidden-import pymobiledevice3.usbmux `
+            --hidden-import pymobiledevice3.lockdown `
+            --hidden-import pymobiledevice3.services.simulate_location `
             --hidden-import pymobiledevice3.remote.tunnel_service `
             --hidden-import pymobiledevice3.remote.remote_service_discovery `
             --hidden-import pymobiledevice3.services.dvt.instruments.dvt_provider `
