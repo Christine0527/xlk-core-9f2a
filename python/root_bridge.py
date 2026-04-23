@@ -227,4 +227,11 @@ async def main():
         await server.serve_forever()
 
 
-asyncio.run(main())
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+try:
+    asyncio.run(main())
+except Exception as e:
+    logger.error(f'Fatal error: {e}')
+    sys.exit(1)

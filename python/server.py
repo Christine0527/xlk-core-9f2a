@@ -81,6 +81,7 @@ _bridge_ready = False
 _bridge_lock = __import__('threading').Lock()
 _bridge_not_ok_since = None
 _bridge_starting = False  # 防止重複彈 UAC
+_bridge_last_start = 0.0  # 上次啟動時間，防止 crash 後立即重啟
 
 
 def _kill_bridge():
@@ -145,7 +146,15 @@ def _ensure_bridge():
             _bridge_shutdown()
             time.sleep(2)
 
+        # 啟動冷卻：30 秒內不重複啟動（避免 crash 迴圈一直彈 UAC）
+        now = time.time()
+        if now - _bridge_last_start < 30:
+            wait = int(30 - (now - _bridge_last_start))
+            logger.warning(f'Bridge recently started, waiting {wait}s before retry...')
+            time.sleep(wait)
+
         _bridge_starting = True
+        _bridge_last_start = time.time()
         logger.info('Starting root_bridge (one-time admin authorization)...')
         if getattr(sys, 'frozen', False):
             if sys.platform == 'win32':
