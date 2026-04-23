@@ -80,6 +80,7 @@ PYTHON3 = _find_python()
 _bridge_ready = False
 _bridge_lock = __import__('threading').Lock()
 _bridge_not_ok_since = None
+_bridge_starting = False  # 防止重複彈 UAC
 
 
 def _kill_bridge():
@@ -108,7 +109,7 @@ def _kill_bridge():
 
 def _ensure_bridge():
     """確保 root_bridge 正在執行。第一次呼叫會要求管理員授權，之後不再需要。"""
-    global _bridge_ready, _bridge_not_ok_since
+    global _bridge_ready, _bridge_not_ok_since, _bridge_starting
 
     if _bridge_ready:
         status = _bridge_ping()
@@ -126,6 +127,14 @@ def _ensure_bridge():
                 _bridge_ready = False
                 _bridge_not_ok_since = None
 
+    # 防止重複彈 UAC：若已有一個啟動流程在跑，等它完成
+    if _bridge_starting:
+        for _ in range(60):
+            time.sleep(0.5)
+            if _bridge_ready:
+                return
+        return
+
     with _bridge_lock:
         status = _bridge_ping()
         if status.get('ok'):
@@ -136,6 +145,7 @@ def _ensure_bridge():
             _bridge_shutdown()
             time.sleep(2)
 
+        _bridge_starting = True
         logger.info('Starting root_bridge (one-time admin authorization)...')
         if getattr(sys, 'frozen', False):
             if sys.platform == 'win32':
@@ -157,16 +167,17 @@ def _ensure_bridge():
             _start_bridge_macos(script_path)
 
         # 等待 bridge TCP server 啟動（pong=True 即代表 bridge 已起來）
-        # 設備連接在背景進行，不在此等待
-        for _ in range(80):
-            time.sleep(0.5)
-            status = _bridge_ping()
-            if status.get('pong'):
-                _bridge_ready = True
-                logger.info('root_bridge TCP server ready!')
-                return
-
-        raise RuntimeError('root_bridge 啟動逾時，請查看日誌')
+        try:
+            for _ in range(80):
+                time.sleep(0.5)
+                status = _bridge_ping()
+                if status.get('pong'):
+                    _bridge_ready = True
+                    logger.info('root_bridge TCP server ready!')
+                    return
+            raise RuntimeError('root_bridge 啟動逾時，請查看日誌')
+        finally:
+            _bridge_starting = False
 
 
 def _start_bridge_macos(script_path: str):

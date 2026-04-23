@@ -329,12 +329,7 @@ async function createWindow() {
 ipcMain.handle('python:port', () => pythonPort)
 ipcMain.handle('device:list', () => callPython('device.list'))
 ipcMain.handle('device:status', (_, udid) => callPython('device.status', { udid }))
-ipcMain.handle('device:mount', async (_, udid) => {
-  const result = await callPython('device.mount', { udid })
-  // mount 完成後立即在背景預熱 bridge，不等用戶點地圖
-  ensureTunneld().catch(e => console.warn('[Bridge] pre-warm failed:', e.message))
-  return result
-})
+ipcMain.handle('device:mount', (_, udid) => callPython('device.mount', { udid }))
 ipcMain.handle('tunneld:start', () => ensureTunneld())
 ipcMain.handle('location:set', (_, { udid, lat, lng, jitter }) => callPython('location.set', { udid, lat, lng, jitter: !!jitter }))
 ipcMain.handle('location:stop', (_, udid) => callPython('location.stop', { udid }))
