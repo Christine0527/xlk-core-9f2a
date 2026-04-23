@@ -146,12 +146,13 @@ def _ensure_bridge():
             _bridge_shutdown()
             time.sleep(2)
 
-        # 啟動冷卻：30 秒內不重複啟動（避免 crash 迴圈一直彈 UAC）
-        now = time.time()
-        if now - _bridge_last_start < 30:
-            wait = int(30 - (now - _bridge_last_start))
-            logger.warning(f'Bridge recently started, waiting {wait}s before retry...')
-            time.sleep(wait)
+        # Windows 啟動冷卻：30 秒內不重複啟動（避免 crash 迴圈一直彈 UAC）
+        if sys.platform == 'win32':
+            now = time.time()
+            if now - _bridge_last_start < 30:
+                wait = int(30 - (now - _bridge_last_start))
+                logger.warning(f'Bridge recently started, waiting {wait}s before retry...')
+                time.sleep(wait)
 
         _bridge_starting = True
         _bridge_last_start = time.time()
