@@ -569,64 +569,6 @@ export default function App() {
     <>
       <GlobalStyle />
       {!onboarded && <Onboarding onDone={handleOnboardingDone} />}
-      {onboarded && noDevice && (
-        <>
-          <ModalOverlay />
-          <ModalBox>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>📱</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 10 }}>
-              尚未偵測到裝置
-            </div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary, lineHeight: 1.8, marginBottom: 28 }}>
-              請用 USB 線將 iPhone 連接到電腦，<br />
-              並在手機上點選「信任此電腦」。<br />
-              連接成功後此視窗會自動關閉。
-            </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              fontSize: 13,
-              color: theme.colors.textMuted,
-              background: theme.colors.surfaceHover,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii.md,
-              padding: '10px 18px',
-              marginBottom: 12,
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: theme.colors.textMuted,
-                display: 'inline-block',
-                flexShrink: 0,
-              }} />
-              等待裝置連線中…
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: theme.colors.textMuted,
-                fontSize: 12,
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: theme.radii.sm,
-              }}
-            >
-              按 <kbd style={{
-                background: theme.colors.surfaceHover,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 4,
-                padding: '1px 5px',
-                fontSize: 11,
-                fontFamily: theme.fonts.mono,
-              }}>⇧R</kbd> 重整
-            </button>
-          </ModalBox>
-        </>
-      )}
       <DeviceStatus
         devices={devices}
         selected={selectedDevice}

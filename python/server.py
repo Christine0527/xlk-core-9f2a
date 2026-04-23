@@ -338,6 +338,7 @@ def location_route(udid: str, waypoints: list, speed: float = 1.4):
     _ensure_bridge()
 
     def walk():
+        INTERVAL = 1.0  # 每秒更新一次，與 iPhone GPS 更新率匹配
         for i in range(len(waypoints) - 1):
             p1, p2 = waypoints[i], waypoints[i + 1]
             R = 6371000
@@ -345,17 +346,18 @@ def location_route(udid: str, waypoints: list, speed: float = 1.4):
             lat2, lon2 = math.radians(p2['lat']), math.radians(p2['lng'])
             a = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
             dist = R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-            steps = max(int(dist / speed * 3), 1)
+            steps = max(int(dist / speed / INTERVAL), 1)
             for s in range(steps):
                 t = s / steps
                 try:
+                    _ensure_bridge()  # bridge 斷線時自動重連
                     _bridge_set(
                         p1['lat'] + (p2['lat'] - p1['lat']) * t,
                         p1['lng'] + (p2['lng'] - p1['lng']) * t
                     )
-                except Exception:
-                    pass
-                time.sleep(3)
+                except Exception as e:
+                    logger.warning(f'[route] step {s} failed: {e}')
+                time.sleep(INTERVAL)
 
     threading.Thread(target=walk, daemon=True).start()
     return {'ok': True}
